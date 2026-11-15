@@ -239,7 +239,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
       <button class="wide" id="clearAll">Clear all history</button>
     </div>
 
-    <div class="ft" id="ver">sportBasket v1.2.3 · tracks your picks, places no bets</div>
+    <div class="ft" id="ver">sportBasket v1.2.4 · tracks your picks, places no bets</div>
   </div>
 </div>
 
@@ -407,7 +407,13 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
   const trackQuota=r=>{ if(r&&r.remaining!=null&&r.remaining!=="") remaining=r.remaining; if(r&&r.limit!=null&&r.limit!=="") limitDay=r.limit; };
 
   function periodFromStatus(sh){ sh=String(sh||"").toUpperCase(); let m=/^Q([1-4])$/.exec(sh)||/^H([1-2])$/.exec(sh); if(m) return +m[1]; if(sh==="HT") return 2; if(sh==="OT"||sh==="AOT") return 5; return null; }
-  function pickFormat(g){ const n=(((g.league&&g.league.name)||"")+" "+((g.country&&g.country.name)||"")).toLowerCase(); if(/ncaa|college/.test(n)) return "NCAAM"; if(/fiba|euro|champions league/.test(n)) return "FIBA"; return "NBA"; }
+  function pickFormat(g){
+    const n=(((g.league&&g.league.name)||"")+" "+((g.country&&g.country.name)||"")).toLowerCase();
+    const women=/women|wnba|\bw\b|female|feminin/.test(n)||/\bw$/i.test((g.teams&&g.teams.home&&g.teams.home.name)||"");
+    if(/\bnba\b/.test(n)&&!women) return "NBA";            // NBA and NBA G League: 4 x 12
+    if(/ncaa|college/.test(n)) return women?"FIBA":"NCAAM";  // men: 2 x 20, women: 4 x 10
+    return "FIBA";                                            // WNBA and most leagues worldwide: 4 x 10
+  }
   function gameClock(g,fmtKey,mode,period){
     const f=FORMATS[fmtKey], sh=String((g.status&&g.status.short)||"").toUpperCase(), per=period>f.periods?OT:f.len;
     if(sh==="HT") return "0:00";
