@@ -217,6 +217,10 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
       <div class="setrow"><div><div class="t">Sound</div></div><button class="sw" id="soundSw"></button></div>
       <div class="setrow"><div><div class="t">Keep screen on</div><div class="h">A locked phone pauses the app, so alerts stop. This keeps the screen awake while the app is open.</div></div><button class="sw" id="awakeSw"></button></div>
       <div class="setrow" style="flex-wrap:wrap"><div style="width:100%"><div class="t">Notifications</div><div class="h" id="notifState" style="max-width:none"></div></div><button class="sm" id="notifBtn">Enable</button><button class="sm" id="testAlert">Send test alert</button></div>
+      <h2 style="margin:18px 0 4px">PHONE ALERTS · ALERT SERVER</h2>
+      <div class="setrow" style="flex-wrap:wrap"><div style="width:100%"><div class="t">Alert server address</div><div class="h" style="max-width:none">Your server reads the live API-Sports data every minute and pushes alerts to this phone, even when the app is closed and the screen is locked. Setup steps are in proxy/ALERTS-SETUP.md.</div></div><input class="kin" id="alertUrl" type="url" placeholder="https://sportbasket-alerts.yourname.workers.dev" autocomplete="off"></div>
+      <div class="setrow" style="flex-wrap:wrap"><div style="width:100%"><div class="t">Alert key</div><div class="h" style="max-width:none">The ALERT_KEY password you set on the server.</div></div><input class="kin" id="alertKey" type="password" placeholder="Alert key" autocomplete="off"><button class="sm" id="pushOn">Turn on phone alerts</button><button class="sm" id="pushTest">Send test</button></div>
+      <div class="setrow"><div><div class="h" id="pushState" style="max-width:none">Not connected.</div></div></div>
       <h2 style="margin:18px 0 4px">LIVE DATA · API-BASKETBALL</h2>
       <div class="setrow" style="flex-wrap:wrap"><div style="width:100%"><div class="t">API key</div><div class="h" style="max-width:none">Stored only on this device and sent only to API-Sports. Skip it if you use a proxy.</div></div><input class="kin" id="keyIn" type="password" placeholder="Paste key" autocomplete="off"><button class="sm" id="keySave">Save</button><button class="sm" id="keyTest">Test</button></div>
       <div class="setrow" style="flex-wrap:wrap"><div style="width:100%"><div class="t">Proxy URL (optional)</div><div class="h" style="max-width:none">Only if the browser blocks direct calls. The proxy holds your key, so leave the key above empty.</div></div><input class="kin" id="proxyIn" type="url" placeholder="https://your-worker.workers.dev" autocomplete="off"></div>
@@ -256,7 +260,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
       <button class="wide" id="clearAll">Clear alert history</button>
     </div>
 
-    <div class="ft" id="ver">sportBasket v1.6.0 · tracks your picks, places no bets</div>
+    <div class="ft" id="ver">sportBasket v1.7.0 · tracks your picks, places no bets</div>
   </div>
 </div>
 
@@ -601,7 +605,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
   function notifyAll(a){
     const x=alertText(a);
     beep(); try{ navigator.vibrate&&navigator.vibrate([200,100,200]); }catch(e){}
-    pushNote("sportBasket · "+x.t,x.d,"sb-"+a.gameId); try{ document.title="🔔 "+x.t; }catch(e){}
+    if(!S.pushOn||a.gameId==="test") pushNote("sportBasket · "+x.t,x.d,"sb-"+a.gameId); try{ document.title="🔔 "+x.t; }catch(e){}
   }
   function fire(m,c,q){
     const fq=FORMATS[m.fmt];
@@ -679,6 +683,35 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
     if(t.id==="aClear"){ S.alerts=[]; S.alerted={}; S.unseen=0; save(); renderAlerts(); render(true); }
   });
   document.getElementById("minScore").addEventListener("input",e=>{ S.minScore=Math.round(num(e.target.value,60)); save(); });
+
+  // ---- phone alerts from your alert server (Web Push) ----
+  const unb64=s=>{s=s.replace(/-/g,"+").replace(/_/g,"/");while(s.length%4)s+="=";const r=atob(s),u=new Uint8Array(r.length);for(let i=0;i<r.length;i++)u[i]=r.charCodeAt(i);return u;};
+  const pushBase=()=>String(S.alertUrl||"").trim().replace(/\/+$/,"");
+  const pst=t=>{ const e=$("pushState"); if(e) e.textContent=t; };
+  async function pushEnable(){
+    const base=pushBase(), key=String(S.alertKey||"").trim();
+    if(!base||!key){ msg("Enter the alert server address and the alert key first."); return; }
+    if(!("serviceWorker" in navigator)||!("PushManager" in window)||!("Notification" in window)){ pst("This browser cannot receive push. On iPhone (iOS 16.4+): Share > Add to Home Screen, then open sportBasket from the Home Screen icon."); msg("Add sportBasket to your Home Screen first."); return; }
+    try{
+      pst("Connecting…");
+      const perm=await Notification.requestPermission(); if(perm!=="granted"){ pst("Notifications are blocked. Allow them for sportBasket in iPhone Settings > Notifications."); return; }
+      const r=await fetch(base+"/vapid",{headers:{"x-alert-key":key}}); const j=await r.json();
+      if(!r.ok||!j.key){ pst((j&&j.error)||"The server did not answer. Check the address and key."); return; }
+      const reg=await navigator.serviceWorker.ready;
+      let sub=await reg.pushManager.getSubscription();
+      if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:unb64(j.key)});
+      const r2=await fetch(base+"/subscribe",{method:"POST",headers:{"x-alert-key":key,"content-type":"application/json"},body:JSON.stringify(sub.toJSON())});
+      const j2=await r2.json(); if(!r2.ok){ pst(j2.error||"Could not register this phone."); return; }
+      S.pushOn=true; save(); pst("Phone alerts are on. This phone is registered with your alert server."); msg("Phone alerts are on.");
+    }catch(e){ pst("Could not connect: "+(e&&e.message?e.message:e)); }
+  }
+  async function pushTest(){
+    try{ const r=await fetch(pushBase()+"/test",{headers:{"x-alert-key":String(S.alertKey||"").trim()}}); const j=await r.json(); pst(j.message||j.error||"Done."); msg(j.message||j.error||"Done."); }
+    catch(e){ pst("Could not reach the server."); }
+  }
+  document.addEventListener("click",ev=>{ const t=ev.target.closest("button"); if(!t) return; if(t.id==="pushOn") pushEnable(); if(t.id==="pushTest") pushTest(); });
+  ["alertUrl","alertKey"].forEach(id=>{ const e=$(id); if(e){ e.value=S[id]||""; e.addEventListener("input",()=>{ S[id]=e.value; save(); }); } });
+  if(S.pushOn) pst("Phone alerts were turned on for this phone. Tap Send test to check.");
 
   function renderApi(){
     $("apiNote").textContent=note+(remaining!=null?` · ${remaining}${limitDay?"/"+limitDay:""} requests left`:"");
