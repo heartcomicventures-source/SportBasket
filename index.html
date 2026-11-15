@@ -184,6 +184,8 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
         <div class="cell"><div class="lbl">Need / min</div><div class="v" id="need">—</div></div>
         <div class="cell"><div class="lbl">Live pace</div><div class="v" id="pace">—</div></div>
         <div class="cell"><div class="lbl">Game</div><div class="v" id="game">—</div></div>
+        <div class="cell"><div class="lbl">Qtr average</div><div class="v" id="qavg">—</div></div>
+        <div class="cell"><div class="lbl">Method</div><div class="v" id="meth">—</div></div>
       </div>
       <div class="today">
         <span class="lbl">TODAY</span><span class="tag" id="tTag">0/5</span><span class="v" id="tNet" style="font-weight:700">+0.0u</span>
@@ -192,6 +194,8 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
       </div>
       <div class="status"><span class="dot" id="sdot"></span><span id="sTxt">—</span><span class="mu" id="sSub"></span></div>
       <div class="box" id="sbox"></div>
+      <div class="box" id="qstrip" style="margin-top:10px"></div>
+      <div class="box" id="timing" style="margin-top:10px"></div>
       <div class="sweep">
         <div class="r"><span class="lbl">CLOCK</span><span id="swTxt"></span><span class="e" id="swE"></span></div>
         <div class="bar"><i id="swBar" style="width:0"></i></div>
@@ -239,7 +243,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
       <button class="wide" id="clearAll">Clear all history</button>
     </div>
 
-    <div class="ft" id="ver">sportBasket v1.2.4 · tracks your picks, places no bets</div>
+    <div class="ft" id="ver">sportBasket v1.3.0 · tracks your picks, places no bets</div>
   </div>
 </div>
 
@@ -249,7 +253,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
     NBA:{periods:4,len:12,lab:"Q"}, FIBA:{periods:4,len:10,lab:"Q"}, NCAAM:{periods:2,len:20,lab:"H"}
   };
   const OT = 5;
-  const D = {line:224.5,home:0,away:0,period:1,clock:"12:00",thr:4,format:"NBA",minSample:6,regress:60,limit:5,guard:true,theme:"dark",min:false,tab:"totals",pick:null,history:[],gameId:"",lines:{},leagueFilter:"",auto:false,every:60,timerMode:"elapsed",proxy:"",liveOnly:true};
+  const D = {line:224.5,home:0,away:0,period:1,clock:"12:00",thr:4,format:"NBA",minSample:6,regress:60,limit:5,guard:true,theme:"dark",min:false,tab:"totals",pick:null,history:[],qs:[],gameId:"",lines:{},leagueFilter:"",auto:false,every:60,timerMode:"elapsed",proxy:"",liveOnly:true};
   let S = JSON.parse(JSON.stringify(D)), view = "totals";
   try { const x = JSON.parse(localStorage.getItem("sportbasket")); if (x) S = Object.assign({}, D, x); } catch(e){}
   const save = () => { try { localStorage.setItem("sportbasket", JSON.stringify(S)); } catch(e){} };
@@ -260,15 +264,51 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
   const todayKey = () => new Date().toDateString();
   const clock = t => { t=String(t).trim(); if(!t) return null; if(t.includes(":")){const[a,b]=t.split(":");const m=parseInt(a,10),s=parseInt(b||"0",10);return isNaN(m)||isNaN(s)?null:m+s/60} const v=parseFloat(t); return isNaN(v)?null:v; };
 
+  // Quarter model: average points per finished quarter (shrunk toward the book line's own per-quarter pace),
+  // plus the current quarter's live rate. Returns null when quarter scores are not available.
+  function qModel(s,f,p,rem,pl,score,line){
+    if(p>f.periods) return null;
+    const n=rem<=0?p:p-1;                         // quarters fully finished
+    const qs=(s.qs||[]).slice(0,n);
+    if(n<1||qs.length<n||qs.some(v=>typeof v!=="number"||isNaN(v))) return null;
+    const sum=qs.reduce((x,y)=>x+y,0), avg=sum/n, prior=line/f.periods;
+    const w=n/(n+1.5), expQ=w*avg+(1-w)*prior;      // trust the live average more as quarters pile up
+    const inCur=n<p, curEl=inCur?pl-rem:0, curRemain=inCur?rem:0, curPts=score-sum, expRate=expQ/pl;
+    const wc=Math.min(.8,curEl/pl);
+    const curRate=curEl>.5?wc*(curPts/curEl)+(1-wc)*expRate:expRate;
+    const fullLeft=f.periods-p;                     // whole quarters still to play after the current one
+    const proj=score+curRemain*curRate+fullLeft*expQ;
+    const sd=n>1?Math.sqrt(qs.reduce((x,y)=>x+(y-avg)*(y-avg),0)/(n-1)):0;
+    return {proj,avg,expQ,qs,sd,n};
+  }
   function calc(s){
     const f=FORMATS[s.format], reg=f.periods*f.len, ot=s.period>f.periods, otN=ot?s.period-f.periods:0, pl=ot?OT:f.len;
     let rem=clock(s.clock); if(rem==null) rem=pl; rem=Math.max(0,Math.min(pl,rem));
     const base=ot?reg+(otN-1)*OT:(s.period-1)*f.len, el=base+(pl-rem), tot=ot?reg+otN*OT:reg, left=Math.max(0,tot-el);
     const score=(+s.home||0)+(+s.away||0), line=+s.line||0, pre=line/reg, live=el>0?score/el:pre;
-    const w=Math.min(.9,(el/reg)*(s.regress/50)), rate=w*live+(1-w)*pre, proj=score+left*rate, edge=proj-line;
+    const w=Math.min(.9,(el/reg)*(s.regress/50)), rate=w*live+(1-w)*pre, projPace=score+left*rate;
+    const qm=qModel(s,f,s.period,rem,pl,score,line);
+    const proj=qm?qm.proj:projPace, edge=proj-line;
     const need=left>0?(line-score)/left:null, ready=el>=s.minSample;
-    let sig="WAIT"; if(left===0&&el>0) sig="FINAL"; else if(ready){ sig=edge>=s.thr?"OVER":edge<=-s.thr?"UNDER":"NO EDGE"; }
-    return {el,left,tot,score,line,live,proj,edge,need,sig,late:left>0&&left<=2,pl};
+    const prog=tot?el/tot:0, eff=s.thr*(prog<.25?2:prog<.45?1.5:1);   // early in the game the edge must be bigger
+    let sig="WAIT";
+    if(left===0&&el>0) sig="FINAL";
+    else if(ready){ const ab=Math.abs(edge); sig=ab>=eff?(edge>0?"OVER":"UNDER"):ab>=s.thr?(edge>0?"LEAN OVER":"LEAN UNDER"):"NO EDGE"; }
+    return {el,left,tot,score,line,live,proj,projPace,qm,prog,eff,edge,need,sig,late:left>0&&left<=2,pl,margin:Math.abs((+s.home||0)-(+s.away||0))};
+  }
+  // When to act as the game goes on
+  function timing(c){
+    if(c.sig==="FINAL") return {t:"Game over",d:"Log your result below."};
+    const strong=c.sig==="OVER"||c.sig==="UNDER", p=c.prog;
+    let t,d;
+    if(p<.25){ t="Too early"; d="Wait for the end of the first quarter. One full quarter gives the first real read."; }
+    else if(p<.45){ t="Watch"; d=strong?`The edge clears the raised early bar of ±${f1(c.eff)}, but only about one quarter is sampled. Keep it small, or wait for halftime.`:"Not yet. Wait for halftime, when half the game has been sampled."; }
+    else if(p<.70){ t="Best window"; d=strong?`The edge clears ±${f1(c.eff)}, and half the game or more is sampled. This is the window to act.`:"This is the best stretch to act, but there is no edge yet. Keep watching until about the middle of the third quarter."; }
+    else if(p<.88){ t="Getting late"; d=strong?"The edge is there, but little time is left for the pace to hold. Take it only if you trust the line.":"Little time left to build an edge. Likely sit this one out."; }
+    else { t="Avoid"; d="Fouling and garbage time swing the total, and the live market line has already moved."; }
+    if(c.qm&&c.qm.n>1&&c.qm.sd>7) d+=` Quarter scoring has been uneven (spread ±${f1(c.qm.sd)}), so trust it less.`;
+    if(c.margin>=20&&p>=.45) d+=" A lead of 20+ can change how both teams score late. Be careful.";
+    return {t,d};
   }
 
   const todays = () => S.history.filter(h => h.day === todayKey());
@@ -302,6 +342,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
     const e=$("edge"); e.textContent=sg(c.edge); e.className="v "+(c.edge>.05?"pos":c.edge<-.05?"neg":"");
     $("need").textContent=c.need==null?"—":f1(c.need);
     $("pace").textContent=c.el>0?f1(c.live):"—";
+    $("qavg").textContent=c.qm?f1(c.qm.avg):"—"; $("meth").textContent=c.qm?"Quarters":"Pace";
     $("game").textContent=`${f1(c.el)} / ${c.tot}`;
 
     const t=todays(), net=t.reduce((a,h)=>a+(h.result?units(h):0),0), left=Math.max(0,S.limit-t.length);
@@ -313,15 +354,19 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
 
     const dotc=c.sig==="OVER"?"o":c.sig==="UNDER"?"u":"";
     $("sdot").className="dot "+(c.sig==="OVER"?"":c.sig==="UNDER"?"u":"o");
-    $("sTxt").textContent=c.sig==="OVER"||c.sig==="UNDER"?c.sig+" signal":c.sig==="NO EDGE"?"No edge":c.sig==="FINAL"?"Final":"Waiting";
+    $("sTxt").textContent=c.sig==="OVER"||c.sig==="UNDER"?c.sig+" signal":c.sig.startsWith("LEAN")?"Lean "+c.sig.slice(5).toLowerCase():c.sig==="NO EDGE"?"No edge":c.sig==="FINAL"?"Final":"Waiting";
     $("sSub").textContent=`· line ${f1(c.line)}`;
     let sb;
     if(c.sig==="OVER"||c.sig==="UNDER") sb=`Projected <span class="am">${f1(c.proj)}</span> is <b>${f1(Math.abs(c.edge))}</b> pts ${c.sig==="OVER"?"above":"below"} the <b>${f1(c.line)}</b> line, past your <b>${f1(S.thr)}</b> threshold.`;
+    else if(c.sig.startsWith("LEAN")) sb=`Leaning <b>${c.sig.slice(5)}</b>: projected <span class="am">${f1(c.proj)}</span> is <b>${f1(Math.abs(c.edge))}</b> pts from the line. Early in the game the bar is <span class="am">±${f1(c.eff)}</span>, so treat it as a lean, not a signal.`;
     else if(c.sig==="NO EDGE") sb=`Projection is only <b>${f1(Math.abs(c.edge))}</b> pts from the line. Needs <span class="am">${f1(S.thr)}</span> for a signal.`;
     else if(c.sig==="FINAL") sb=`Game over at <b>${c.score}</b> vs line <b>${f1(c.line)}</b>. Log the result below.`;
     else sb=`Enter scores and the clock. Signals start after <span class="am">${S.minSample}</span> min of game time.`;
     if(S.guard&&c.late) sb+=` <b style="color:var(--amber)">Final 2 minutes: fouling can swing the total.</b>`;
     $("sbox").innerHTML=sb;
+    const fq=FORMATS[S.format];
+    $("qstrip").innerHTML=c.qm?`<b>Quarters</b> &nbsp;${c.qm.qs.map((v,i)=>`${fq.lab}${i+1} <b>${v}</b>`).join(" · ")} &nbsp;|&nbsp; average <span class="am">${f1(c.qm.avg)}</span> · next quarters projected at <span class="am">${f1(c.qm.expQ)}</span> each`:`Quarter scores load when you pick a live game that has finished at least one quarter. Until then the projection uses the game's overall pace.`;
+    const tm=timing(c); $("timing").innerHTML=`<b>Bet timing: <span class="am">${tm.t}</span></b><br>${tm.d}`;
     $("swTxt").textContent=`Game clock · ${f1(c.el)} / ${c.tot}`; $("swE").textContent=S.format;
     $("swBar").style.width=Math.min(100,c.el/c.tot*100)+"%";
 
@@ -372,7 +417,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
       if(!S.pick) return msg("Press OVER or UNDER first, then log the result.");
       return upd(()=>{ S.history.push(Object.assign({}, S.pick, {result:t.dataset.r, day:todayKey()})); S.pick=null; });
     }
-    if(t.id==="end") return upd(()=>{S.home=0;S.away=0;S.period=1;S.clock=FORMATS[S.format].len+":00";S.pick=null; msg("Session ended. Scores reset; your log is kept.");});
+    if(t.id==="end") return upd(()=>{S.home=0;S.away=0;S.qs=[];S.period=1;S.clock=FORMATS[S.format].len+":00";S.pick=null; msg("Session ended. Scores reset; your log is kept.");});
     if(t.id==="goLog") return go("log");
     if(t.id==="goDash") return go("dash");
     if(t.id==="clearAll") return upd(()=>{S.history=[]; renderDash();});
@@ -428,7 +473,8 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
     const fmtKey=pickFormat(g);
     const p=sh==="NS"?1:periodFromStatus(sh);
     const sc=g.scores||{}, h=sc.home&&sc.home.total, a=sc.away&&sc.away.total;
-    return {id:String(g.id),fmt:fmtKey,period:p,clock:p?gameClock(g,fmtKey,mode,p):null,home:h==null?0:+h,away:a==null?0:+a,
+    const qs=[]; for(let i=1;i<=4;i++){ const hq=sc.home&&sc.home["quarter_"+i], aq=sc.away&&sc.away["quarter_"+i]; qs.push(hq!=null&&aq!=null?+hq+ +aq:null); }
+    return {id:String(g.id),fmt:fmtKey,period:p,clock:p?gameClock(g,fmtKey,mode,p):null,home:h==null?0:+h,away:a==null?0:+a,qs,
       label:`${(g.teams&&g.teams.home&&g.teams.home.name)||"Home"} vs ${(g.teams&&g.teams.away&&g.teams.away.name)||"Away"}`,status:sh,league:(g.league&&g.league.name)||""};
   }
   function parseOdds(resp){
@@ -446,7 +492,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
 
   function applyGame(m){
     S.format=m.fmt; buildStatic();
-    S.home=m.home; S.away=m.away;
+    S.home=m.home; S.away=m.away; S.qs=m.qs||[];
     if(m.period){ S.period=Math.min(m.period,FORMATS[S.format].periods+1); if(m.clock!=null) S.clock=m.clock; }
     if(S.lines[m.id]) S.line=S.lines[m.id];
   }
@@ -499,7 +545,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
   }
   $("gameSel").addEventListener("change",async e=>{
     S.gameId=e.target.value; save();
-    if(!S.gameId){ note="Manual entry"; return render(); }
+    if(!S.gameId){ note="Manual entry"; S.qs=[]; save(); return render(); }
     const m=games.find(g=>g.id===S.gameId); if(m) applyGame(m);
     note="Loading line…"; render();
     if(!S.lines[S.gameId]) await loadOdds(S.gameId); else note=`Line ${f1(S.lines[S.gameId])} (saved)`;
