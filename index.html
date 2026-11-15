@@ -238,7 +238,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
       <button class="wide" id="clearAll">Clear all history</button>
     </div>
 
-    <div class="ft" id="ver">sportBasket v1.2.1 · tracks your picks, places no bets</div>
+    <div class="ft" id="ver">sportBasket v1.2.2 · tracks your picks, places no bets</div>
   </div>
 </div>
 
@@ -384,7 +384,129 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
   $("clock").addEventListener("input",e=>{S.clock=e.target.value;save();render(true);});
   document.querySelectorAll("input").forEach(i=>i.addEventListener("focus",()=>i.select()));
 
-  buildStatic(); render();
+
+  // ================= API-BASKETBALL (live data) =================
+  const KEYNAME="sportbasketKey";
+  let games=[], remaining=null, limitDay=null, busy=false, note="", hasKey=false;
+  const pad=n=>String(n).padStart(2,"0");
+  const BASE="https://v1.basketball.api-sports.io";
+  const getKey=()=>{try{return localStorage.getItem(KEYNAME)||""}catch(e){return ""}};
+  async function api(path){
+    const base=(S.proxy||BASE).replace(/\/+$/,""), headers={};
+    if(!S.proxy){ const k=getKey(); if(!k) return {error:"No API key saved. Add it in Settings."}; headers["x-apisports-key"]=k; }
+    try{
+      const resp=await fetch(base+path,{headers});
+      const data=await resp.json().catch(()=>null);
+      return {ok:resp.ok,status:resp.status,remaining:resp.headers.get("x-ratelimit-requests-remaining"),limit:resp.headers.get("x-ratelimit-requests-limit"),data};
+    }catch(e){
+      return {error:S.proxy?"Could not reach your proxy. Check the URL in Settings.":"The browser could not reach the API directly (it may block web pages, or you are offline). Set up the proxy from the README and paste its URL in Settings."};
+    }
+  }
+  const apiErr=r=>{ if(r.error) return r.error; const e=r.data&&r.data.errors; if(e&&(Array.isArray(e)?e.length:Object.keys(e).length)) return typeof e==="string"?e:JSON.stringify(e); if(r.status&&r.status>=400) return "HTTP "+r.status; return null; };
+  const trackQuota=r=>{ if(r&&r.remaining!=null&&r.remaining!=="") remaining=r.remaining; if(r&&r.limit!=null&&r.limit!=="") limitDay=r.limit; };
+
+  function periodFromStatus(sh){ sh=String(sh||"").toUpperCase(); let m=/^Q([1-4])$/.exec(sh)||/^H([1-2])$/.exec(sh); if(m) return +m[1]; if(sh==="HT") return 2; if(sh==="OT"||sh==="AOT") return 5; return null; }
+  function pickFormat(g){ const n=(((g.league&&g.league.name)||"")+" "+((g.country&&g.country.name)||"")).toLowerCase(); if(/ncaa|college/.test(n)) return "NCAAM"; if(/fiba|euro|champions league/.test(n)) return "FIBA"; return "NBA"; }
+  function gameClock(g,fmtKey,mode,period){
+    const f=FORMATS[fmtKey], sh=String((g.status&&g.status.short)||"").toUpperCase(), per=period>f.periods?OT:f.len;
+    if(sh==="HT") return "0:00";
+    if(sh==="NS") return per+":00";
+    const raw=g.status&&g.status.timer; if(raw==null||raw==="") return null;
+    const t=parseFloat(String(raw).replace(",",".")); if(isNaN(t)) return null;
+    let rem=mode==="elapsed"?per-t:t; rem=Math.max(0,Math.min(per,rem));
+    return Math.floor(rem)+":"+pad(Math.round((rem%1)*60)%60);
+  }
+  function mapGame(g,mode){
+    const sh=String((g.status&&g.status.short)||"").toUpperCase();
+    const fmtKey=pickFormat(g);
+    const p=sh==="NS"?1:periodFromStatus(sh);
+    const sc=g.scores||{}, h=sc.home&&sc.home.total, a=sc.away&&sc.away.total;
+    return {id:String(g.id),fmt:fmtKey,period:p,clock:p?gameClock(g,fmtKey,mode,p):null,home:h==null?0:+h,away:a==null?0:+a,
+      label:`${(g.teams&&g.teams.home&&g.teams.home.name)||"Home"} vs ${(g.teams&&g.teams.away&&g.teams.away.name)||"Away"}`,status:sh,league:(g.league&&g.league.name)||""};
+  }
+  function parseOdds(resp){
+    const out=[]; const items=(resp&&resp.response)||[];
+    for(const it of items) for(const b of (it.bookmakers||[])) for(const bet of (b.bets||[])){
+      if(!/^over\/under$/i.test(String(bet.name||"").trim())) continue;
+      const m={};
+      for(const v of (bet.values||[])){ const mm=/^(over|under)\s+([\d.]+)/i.exec(String(v.value).trim()); if(!mm) continue; (m[mm[2]]=m[mm[2]]||{})[mm[1].toLowerCase()]=parseFloat(v.odd); }
+      const lines=Object.keys(m).filter(k=>m[k].over&&m[k].under).map(k=>({line:parseFloat(k),gap:Math.abs(m[k].over-m[k].under)})).sort((x,y)=>x.gap-y.gap);
+      if(lines.length) out.push({book:b.name,line:lines[0].line});
+    }
+    return out;
+  }
+  const median=a=>{const s=a.slice().sort((x,y)=>x-y),n=s.length;return n?(n%2?s[(n-1)/2]:(s[n/2-1]+s[n/2])/2):null;};
+
+  function applyGame(m){
+    S.format=m.fmt; buildStatic();
+    S.home=m.home; S.away=m.away;
+    if(m.period){ S.period=Math.min(m.period,FORMATS[S.format].periods+1); if(m.clock!=null) S.clock=m.clock; }
+    if(S.lines[m.id]) S.line=S.lines[m.id];
+  }
+  async function loadOdds(id){
+    const r=await api("/odds?game="+encodeURIComponent(id)); trackQuota(r);
+    const e=apiErr(r); if(e){ note="Odds: "+e; return false; }
+    const o=parseOdds(r.data);
+    if(!o.length){ note="No Over/Under odds for this game. Enter the line by hand."; return false; }
+    const line=median(o.map(x=>x.line)); S.lines[id]=line; S.line=line;
+    note=`Line ${f1(line)} from ${o.length} bookmaker${o.length>1?"s":""} (pre-match odds)`;
+    return true;
+  }
+  function fillGames(){
+    const sel=$("gameSel"), cur=S.gameId;
+    sel.innerHTML='<option value="">Manual entry</option>'+games.map(g=>`<option value="${g.id}">${g.label} · ${g.status==="NS"?"not started":g.status} · ${g.home}-${g.away}</option>`).join("");
+    if(cur&&!games.find(g=>g.id===cur)){ sel.insertAdjacentHTML("beforeend",`<option value="${cur}">Selected game (not live now)</option>`); }
+    sel.value=cur||"";
+  }
+  async function loadGames(){
+    if(busy) return; busy=true; note="Loading live games…"; render(true);
+    const r=await api("/games?live=all"); trackQuota(r);
+    busy=false;
+    const e=apiErr(r);
+    if(e){ note=/key/i.test(e)&&!hasKey?"Add your API key in Settings.":e; render(true); return; }
+    const flt=(S.leagueFilter||"").trim().toLowerCase();
+    games=((r.data&&r.data.response)||[]).map(g=>mapGame(g,S.timerMode)).filter(m=>!flt||m.league.toLowerCase().includes(flt));
+    note=games.length?`${games.length} live game${games.length>1?"s":""}`:"No live games right now.";
+    fillGames();
+    const sel=games.find(g=>g.id===S.gameId);
+    if(sel){ applyGame(sel); if(sel.clock==null) note+=" · clock not provided, enter it by hand"; }
+    save(); render();
+  }
+  function renderApi(){
+    $("apiNote").textContent=note+(remaining!=null?` · ${remaining}${limitDay?"/"+limitDay:""} requests left`:"");
+    $("autoSw").classList.toggle("on",S.auto);
+    document.querySelectorAll("#tmSeg button").forEach(b=>b.classList.toggle("on",b.dataset.tm===S.timerMode));
+    const set=(id,v)=>{const e=$(id); if(document.activeElement!==e) e.value=v;};
+    set("every",S.every); set("lgF",S.leagueFilter); set("proxyIn",S.proxy||"");
+  }
+  $("gameSel").addEventListener("change",async e=>{
+    S.gameId=e.target.value; save();
+    if(!S.gameId){ note="Manual entry"; return render(); }
+    const m=games.find(g=>g.id===S.gameId); if(m) applyGame(m);
+    note="Loading line…"; render();
+    if(!S.lines[S.gameId]) await loadOdds(S.gameId); else note=`Line ${f1(S.lines[S.gameId])} (saved)`;
+    save(); render();
+  });
+  document.addEventListener("click",async ev=>{
+    const t=ev.target.closest("button"); if(!t) return;
+    if(t.id==="refresh"){ await loadGames(); const g=S.gameId; if(g&&!S.lines[g]){ await loadOdds(g); save(); render(); } }
+    if(t.id==="autoSw"){ S.auto=!S.auto; save(); render(); schedule(); }
+    if(t.dataset.tm){ S.timerMode=t.dataset.tm; save(); render(); }
+    if(t.id==="keySave"){ const v=$("keyIn").value.trim(); if(!v) return msg("Paste your API key first."); try{ localStorage.setItem(KEYNAME,v); }catch(e){} hasKey=true; $("keyIn").value=""; msg("Key saved in this browser."); }
+    if(t.id==="keyTest"){ msg("Testing…"); const r=await api("/status"); trackQuota(r); const e=apiErr(r);
+      if(e) return msg("Test failed: "+e);
+      const x=r.data&&r.data.response||{}, plan=x.subscription&&x.subscription.plan, rq=x.requests;
+      if(rq){ remaining=rq.limit_day!=null&&rq.current!=null?rq.limit_day-rq.current:remaining; limitDay=rq.limit_day||limitDay; }
+      msg("Connected"+(plan?" · plan "+plan:"")+(rq?` · ${rq.current}/${rq.limit_day} requests used today`:"")); render(); }
+  });
+  $("lgF").addEventListener("input",e=>{S.leagueFilter=e.target.value;save();});
+  let timer=null;
+  function schedule(){ clearTimeout(timer); if(!S.auto) return; timer=setTimeout(async()=>{ if(!document.hidden&&hasKey) await loadGames(); schedule(); },Math.max(30,S.every||60)*1000); }
+  hasKey=!!getKey(); if(!hasKey) note="Add your API key in Settings for live games.";
+  document.getElementById("proxyIn").addEventListener("input",e=>{S.proxy=e.target.value.trim();save();});
+
+  buildStatic(); fillGames(); render(); schedule();
+  if("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js").catch(()=>{});
 })();
 </script>
 </body>

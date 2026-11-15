@@ -1,5 +1,5 @@
 // Caches the app shell so sportBasket opens instantly and works offline (live data still needs a connection).
-const CACHE = "sportbasket-v1.2.1";
+const CACHE = "sportbasket-v1.2.2";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", (e) => {
