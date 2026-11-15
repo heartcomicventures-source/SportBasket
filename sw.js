@@ -1,5 +1,5 @@
 // Caches the app shell so sportBasket opens instantly and works offline (live data still needs a connection).
-const CACHE = "sportbasket-v1.4.0";
+const CACHE = "sportbasket-v1.5.0";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", (e) => {
@@ -12,4 +12,9 @@ self.addEventListener("fetch", (e) => {
     fetch(e.request).then((r) => { const copy = r.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)); return r; })
       .catch(() => caches.match(e.request).then((m) => m || caches.match("index.html")))
   );
+});
+// Tapping a sportBasket notification brings the app to the front.
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((cs) => (cs.length ? cs[0].focus() : self.clients.openWindow("./"))));
 });
