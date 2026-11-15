@@ -211,6 +211,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
       <div class="setrow" style="flex-wrap:wrap"><div style="width:100%"><div class="t">API key</div><div class="h" style="max-width:none">Stored only on this device and sent only to API-Sports. Skip it if you use a proxy.</div></div><input class="kin" id="keyIn" type="password" placeholder="Paste key" autocomplete="off"><button class="sm" id="keySave">Save</button><button class="sm" id="keyTest">Test</button></div>
       <div class="setrow" style="flex-wrap:wrap"><div style="width:100%"><div class="t">Proxy URL (optional)</div><div class="h" style="max-width:none">Only if the browser blocks direct calls. The proxy holds your key, so leave the key above empty.</div></div><input class="kin" id="proxyIn" type="url" placeholder="https://your-worker.workers.dev" autocomplete="off"></div>
       <div class="setrow"><div><div class="t">League filter</div><div class="h">Only list live games whose league name contains this text. Blank shows all.</div></div><input class="kin" id="lgF" style="max-width:120px" placeholder="e.g. NBA"></div>
+      <div class="setrow"><div><div class="t">Live games only</div><div class="h">Off lists every game today, including upcoming and finished ones.</div></div><button class="sw" id="liveSw"></button></div>
       <div class="setrow"><div><div class="t">Auto-refresh</div><div class="h">Each refresh uses 1 request. Free plans allow about 100 a day.</div></div><button class="sw" id="autoSw"></button></div>
       <div class="setrow"><div><div class="t">Refresh every (sec)</div></div><div class="step"><button class="sb" data-s="every" data-d="-30">−</button><input class="sv" id="every" style="width:52px"><button class="sb" data-s="every" data-d="30">+</button></div></div>
       <div class="setrow"><div><div class="t">API clock means</div><div class="h">If the clock looks backwards, flip this.</div></div><div class="seg" id="tmSeg"><button data-tm="elapsed">Elapsed</button><button data-tm="remaining">Left</button></div></div>
@@ -238,7 +239,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
       <button class="wide" id="clearAll">Clear all history</button>
     </div>
 
-    <div class="ft" id="ver">sportBasket v1.2.2 · tracks your picks, places no bets</div>
+    <div class="ft" id="ver">sportBasket v1.2.3 · tracks your picks, places no bets</div>
   </div>
 </div>
 
@@ -248,7 +249,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
     NBA:{periods:4,len:12,lab:"Q"}, FIBA:{periods:4,len:10,lab:"Q"}, NCAAM:{periods:2,len:20,lab:"H"}
   };
   const OT = 5;
-  const D = {line:224.5,home:0,away:0,period:1,clock:"12:00",thr:4,format:"NBA",minSample:6,regress:60,limit:5,guard:true,theme:"dark",min:false,tab:"totals",pick:null,history:[],gameId:"",lines:{},leagueFilter:"",auto:false,every:60,timerMode:"elapsed",proxy:""};
+  const D = {line:224.5,home:0,away:0,period:1,clock:"12:00",thr:4,format:"NBA",minSample:6,regress:60,limit:5,guard:true,theme:"dark",min:false,tab:"totals",pick:null,history:[],gameId:"",lines:{},leagueFilter:"",auto:false,every:60,timerMode:"elapsed",proxy:"",liveOnly:true};
   let S = JSON.parse(JSON.stringify(D)), view = "totals";
   try { const x = JSON.parse(localStorage.getItem("sportbasket")); if (x) S = Object.assign({}, D, x); } catch(e){}
   const save = () => { try { localStorage.setItem("sportbasket", JSON.stringify(S)); } catch(e){} };
@@ -458,23 +459,34 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
     if(cur&&!games.find(g=>g.id===cur)){ sel.insertAdjacentHTML("beforeend",`<option value="${cur}">Selected game (not live now)</option>`); }
     sel.value=cur||"";
   }
+  const isLive=sh=>/^(Q[1-4]|OT|HT|BT|H[12])$/.test(sh);
+  const dateStr=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
   async function loadGames(){
-    if(busy) return; busy=true; note="Loading live games…"; render(true);
-    const r=await api("/games?live=all"); trackQuota(r);
+    if(busy) return; busy=true; note="Loading games…"; render(true);
+    let tz=""; try{ tz=Intl.DateTimeFormat().resolvedOptions().timeZone||""; }catch(e){}
+    const base="/games?date="+dateStr(new Date());
+    let r=await api(base+(tz?"&timezone="+encodeURIComponent(tz):""));
+    if(tz&&apiErr(r)&&/timezone/i.test(apiErr(r))) r=await api(base);
+    trackQuota(r);
     busy=false;
     const e=apiErr(r);
     if(e){ note=/key/i.test(e)&&!hasKey?"Add your API key in Settings.":e; render(true); return; }
     const flt=(S.leagueFilter||"").trim().toLowerCase();
-    games=((r.data&&r.data.response)||[]).map(g=>mapGame(g,S.timerMode)).filter(m=>!flt||m.league.toLowerCase().includes(flt));
-    note=games.length?`${games.length} live game${games.length>1?"s":""}`:"No live games right now.";
+    const list=((r.data&&r.data.response)||[]).map(g=>mapGame(g,S.timerMode)).filter(m=>!flt||m.league.toLowerCase().includes(flt));
+    const rank=m=>isLive(m.status)?0:m.status==="NS"?1:2;
+    const shown=(S.liveOnly?list.filter(m=>isLive(m.status)):list).sort((x,y)=>rank(x)-rank(y)||x.label.localeCompare(y.label));
+    games=shown.slice(0,80);
+    const nLive=list.filter(m=>isLive(m.status)).length;
+    note=games.length?`${nLive} live · ${games.length} listed`:(S.liveOnly?`No live games right now (${list.length} games today). Turn off "Live games only" in Settings to see them all.`:"No games found for today.");
     fillGames();
-    const sel=games.find(g=>g.id===S.gameId);
-    if(sel){ applyGame(sel); if(sel.clock==null) note+=" · clock not provided, enter it by hand"; }
+    const sel=list.find(g=>g.id===S.gameId);
+    if(sel){ applyGame(sel); if(isLive(sel.status)&&sel.clock==null) note+=" · clock not provided, enter it by hand"; }
     save(); render();
   }
   function renderApi(){
     $("apiNote").textContent=note+(remaining!=null?` · ${remaining}${limitDay?"/"+limitDay:""} requests left`:"");
     $("autoSw").classList.toggle("on",S.auto);
+    $("liveSw").classList.toggle("on",S.liveOnly!==false);
     document.querySelectorAll("#tmSeg button").forEach(b=>b.classList.toggle("on",b.dataset.tm===S.timerMode));
     const set=(id,v)=>{const e=$(id); if(document.activeElement!==e) e.value=v;};
     set("every",S.every); set("lgF",S.leagueFilter); set("proxyIn",S.proxy||"");
@@ -490,6 +502,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
   document.addEventListener("click",async ev=>{
     const t=ev.target.closest("button"); if(!t) return;
     if(t.id==="refresh"){ await loadGames(); const g=S.gameId; if(g&&!S.lines[g]){ await loadOdds(g); save(); render(); } }
+    if(t.id==="liveSw"){ S.liveOnly=!(S.liveOnly!==false); save(); render(); loadGames(); }
     if(t.id==="autoSw"){ S.auto=!S.auto; save(); render(); schedule(); }
     if(t.dataset.tm){ S.timerMode=t.dataset.tm; save(); render(); }
     if(t.id==="keySave"){ const v=$("keyIn").value.trim(); if(!v) return msg("Paste your API key first."); try{ localStorage.setItem(KEYNAME,v); }catch(e){} hasKey=true; $("keyIn").value=""; msg("Key saved in this browser."); }
