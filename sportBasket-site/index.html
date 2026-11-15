@@ -76,7 +76,7 @@ button{cursor:pointer;border:0;background:none}
 .bar{height:4px;border-radius:9px;background:var(--line);margin-top:11px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--mu);transition:width .3s}
 .go{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
-.go button{height:64px;border-radius:14px;font-weight:800;letter-spacing:.26em;font-size:20px;border:1px solid}
+.go button{height:68px;border-radius:14px;font-weight:900;letter-spacing:.16em;font-size:26px;border:1px solid;-webkit-text-stroke:.8px currentColor;text-shadow:0 0 18px color-mix(in srgb,currentColor 35%,transparent)}
 .bo{color:var(--green);border-color:color-mix(in srgb,var(--green) 60%,transparent);background:color-mix(in srgb,var(--green) 10%,transparent)}
 .bu{color:var(--red);border-color:color-mix(in srgb,var(--red) 60%,transparent);background:color-mix(in srgb,var(--red) 10%,transparent)}
 .bo.on{background:var(--green);color:#04140b}.bu.on{background:var(--red);color:#1a0509}
@@ -137,6 +137,11 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
   .sv{font-size:22px}
 }
 #toast{display:none;position:fixed;left:50%;bottom:max(24px,env(safe-area-inset-bottom));transform:translateX(-50%);max-width:min(92vw,420px);z-index:99;background:var(--card);color:var(--tx);border:1px solid var(--amber);border-radius:12px;padding:12px 16px;font-size:14px;line-height:1.4;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.abar{display:flex;align-items:center;gap:10px;padding:12px 16px;background:color-mix(in srgb,var(--amber) 14%,var(--panel));border-top:1px solid var(--amber);border-bottom:1px solid var(--amber);animation:abp 1.4s ease-in-out 4}
+.abar .tx{flex:1;font-size:14px;line-height:1.4}.abar .tx b{font-weight:800}
+@keyframes abp{50%{background:color-mix(in srgb,var(--amber) 32%,var(--panel))}}
+.tab .bd{background:var(--amber);color:#1a1000;border-radius:99px;font-size:11px;font-weight:800;padding:1px 7px}
+.tab{font-size:14px;gap:6px}
 </style>
 </head>
 <body>
@@ -152,8 +157,10 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
       <button class="ib" id="theme" title="Light / dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
       <button class="ib" id="minb" title="Minimize"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
     </div>
+    <div class="abar hide" id="alertbar"></div>
     <div class="tabs">
       <button class="tab" data-t="totals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>Totals</button>
+      <button class="tab" data-t="alerts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>Alerts<span class="bd" id="aBadge" style="display:none"></span></button>
       <button class="tab" data-t="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Settings</button>
     </div>
 
@@ -184,22 +191,18 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
         <div class="cell"><div class="lbl">Need / min</div><div class="v" id="need">—</div></div>
         <div class="cell"><div class="lbl">Live pace</div><div class="v" id="pace">—</div></div>
         <div class="cell"><div class="lbl">Game</div><div class="v" id="game">—</div></div>
-      </div>
-      <div class="today">
-        <span class="lbl">TODAY</span><span class="tag" id="tTag">0/5</span><span class="v" id="tNet" style="font-weight:700">+0.0u</span>
-        <div class="track"><i id="tFill" style="width:0"></i><b id="tKnob" style="left:0"></b></div>
-        <span class="mu" id="tLeft">5 picks left</span>
+        <div class="cell"><div class="lbl">Qtr average</div><div class="v" id="qavg">—</div></div>
+        <div class="cell"><div class="lbl">Method</div><div class="v" id="meth">—</div></div>
       </div>
       <div class="status"><span class="dot" id="sdot"></span><span id="sTxt">—</span><span class="mu" id="sSub"></span></div>
       <div class="box" id="sbox"></div>
+      <div class="box" id="qstrip" style="margin-top:10px"></div>
+      <div class="box" id="timing" style="margin-top:10px"></div>
       <div class="sweep">
         <div class="r"><span class="lbl">CLOCK</span><span id="swTxt"></span><span class="e" id="swE"></span></div>
         <div class="bar"><i id="swBar" style="width:0"></i></div>
       </div>
-      <div class="go"><button class="bo" id="bOver">OVER</button><button class="bu" id="bUnder">UNDER</button></div>
-      <div class="box" id="pbox"></div>
       <div class="row"><span class="lbl">FORMAT</span><select id="fmtSel"></select></div>
-      <div class="row"><span class="lbl">LOG BY<br>HAND</span><div class="logbtns"><button class="lb w" data-r="WIN">WIN</button><button class="lb l" data-r="LOSS">LOSS</button><button class="lb d" data-r="PUSH">PUSH</button></div></div>
       <div class="box" id="msg" style="margin-top:10px;display:none"></div>
       <button class="wide" id="end">End session</button>
       <div class="two"><button class="wide" id="goLog">Session Log</button><button class="wide" id="goDash">Dashboard</button></div>
@@ -207,19 +210,38 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
 
     <!-- SETTINGS -->
     <div class="body hide" id="v-settings">
-      <h2 style="margin-bottom:4px">LIVE DATA · API-BASKETBALL</h2>
+      <h2 style="margin-bottom:4px">ALERTS</h2>
+      <div class="setrow"><div><div class="t">Signal alerts</div><div class="h">Alerts you when a live game gets a strong OVER or UNDER signal. Works while the app is open.</div></div><button class="sw" id="alertSw"></button></div>
+      <div class="setrow"><div><div class="t">Scan all live games</div><div class="h">Off watches only the game you picked. Each new game costs 1 request, once, to get its line.</div></div><button class="sw" id="scanSw"></button></div>
+      <div class="setrow"><div><div class="t">Minimum signal quality</div><div class="h">0 to 100. Higher means fewer, stronger alerts. Try 60 to 70.</div></div><div class="step"><button class="sb" data-s="minScore" data-d="-5">−</button><input class="sv" id="minScore" style="width:52px" inputmode="numeric"><button class="sb" data-s="minScore" data-d="5">+</button></div></div>
+      <div class="setrow"><div><div class="t">Sound</div></div><button class="sw" id="soundSw"></button></div>
+      <div class="setrow"><div><div class="t">Keep screen on</div><div class="h">A locked phone pauses the app, so alerts stop. This keeps the screen awake while the app is open.</div></div><button class="sw" id="awakeSw"></button></div>
+      <div class="setrow" style="flex-wrap:wrap"><div style="width:100%"><div class="t">Notifications</div><div class="h" id="notifState" style="max-width:none"></div></div><button class="sm" id="notifBtn">Enable</button><button class="sm" id="testAlert">Send test alert</button></div>
+      <h2 style="margin:18px 0 4px">PHONE ALERTS · ALERT SERVER</h2>
+      <div class="setrow" style="flex-wrap:wrap"><div style="width:100%"><div class="t">Alert server address</div><div class="h" style="max-width:none">Your server reads the live API-Sports data every minute and pushes alerts to this phone, even when the app is closed and the screen is locked. Setup steps are in proxy/ALERTS-SETUP.md.</div></div><input class="kin" id="alertUrl" type="url" placeholder="https://sportbasket-alerts.yourname.workers.dev" autocomplete="off"></div>
+      <div class="setrow" style="flex-wrap:wrap"><div style="width:100%"><div class="t">Alert key</div><div class="h" style="max-width:none">The ALERT_KEY password you set on the server.</div></div><input class="kin" id="alertKey" type="password" placeholder="Alert key" autocomplete="off"><button class="sm" id="pushOn">Turn on phone alerts</button><button class="sm" id="pushTest">Send test</button></div>
+      <div class="setrow"><div><div class="h" id="pushState" style="max-width:none">Not connected.</div></div></div>
+      <h2 style="margin:18px 0 4px">LIVE DATA · API-BASKETBALL</h2>
       <div class="setrow" style="flex-wrap:wrap"><div style="width:100%"><div class="t">API key</div><div class="h" style="max-width:none">Stored only on this device and sent only to API-Sports. Skip it if you use a proxy.</div></div><input class="kin" id="keyIn" type="password" placeholder="Paste key" autocomplete="off"><button class="sm" id="keySave">Save</button><button class="sm" id="keyTest">Test</button></div>
       <div class="setrow" style="flex-wrap:wrap"><div style="width:100%"><div class="t">Proxy URL (optional)</div><div class="h" style="max-width:none">Only if the browser blocks direct calls. The proxy holds your key, so leave the key above empty.</div></div><input class="kin" id="proxyIn" type="url" placeholder="https://your-worker.workers.dev" autocomplete="off"></div>
       <div class="setrow"><div><div class="t">League filter</div><div class="h">Only list live games whose league name contains this text. Blank shows all.</div></div><input class="kin" id="lgF" style="max-width:120px" placeholder="e.g. NBA"></div>
-      <div class="setrow"><div><div class="t">Auto-refresh</div><div class="h">Each refresh uses 1 request. Free plans allow about 100 a day.</div></div><button class="sw" id="autoSw"></button></div>
-      <div class="setrow"><div><div class="t">Refresh every (sec)</div></div><div class="step"><button class="sb" data-s="every" data-d="-30">−</button><input class="sv" id="every" style="width:52px"><button class="sb" data-s="every" data-d="30">+</button></div></div>
+      <div class="setrow"><div><div class="t">Live games only</div><div class="h">Off lists every game today, including upcoming and finished ones.</div></div><button class="sw" id="liveSw"></button></div>
+      <div class="setrow"><div><div class="t">Auto-refresh</div><div class="h">Refreshes scores and the clock by itself. Each refresh uses 1 request. Pauses when under 50 are left today.</div></div><button class="sw" id="autoSw"></button></div>
+      <div class="setrow"><div><div class="t">Refresh every (sec)</div><div class="h">Minimum 10. The clock itself ticks every second between refreshes.</div></div><div class="step"><button class="sb" data-s="every" data-d="-5">−</button><input class="sv" id="every" style="width:52px"><button class="sb" data-s="every" data-d="5">+</button></div></div>
       <div class="setrow"><div><div class="t">API clock means</div><div class="h">If the clock looks backwards, flip this.</div></div><div class="seg" id="tmSeg"><button data-tm="elapsed">Elapsed</button><button data-tm="remaining">Left</button></div></div>
       <h2 style="margin:18px 0 0">GAME RULES</h2>
       <div class="setrow"><div><div class="t">Game format</div><div class="h">NBA 4×12 · FIBA 4×10 · NCAAM 2×20. Overtime is 5 min.</div></div><div class="seg" id="fmtSeg"></div></div>
       <div class="setrow"><div><div class="t">Min. sample (min)</div><div class="h">No OVER/UNDER signal until this much game time has been played.</div></div><div class="step"><button class="sb" data-s="minSample" data-d="-1">−</button><input class="sv" id="minSample" style="width:44px"><button class="sb" data-s="minSample" data-d="1">+</button></div></div>
       <div class="setrow"><div><div class="t">Live-pace weight</div><div class="h">Higher trusts live pace sooner; lower leans on the book line longer. 50 is balanced.</div></div><div class="step"><button class="sb" data-s="regress" data-d="-10">−</button><input class="sv" id="regress" style="width:44px"><button class="sb" data-s="regress" data-d="10">+</button></div></div>
-      <div class="setrow"><div><div class="t">Daily pick limit</div><div class="h">Locks new picks once you reach it. Discipline over volume.</div></div><div class="step"><button class="sb" data-s="limit" data-d="-1">−</button><input class="sv" id="limit" style="width:44px"><button class="sb" data-s="limit" data-d="1">+</button></div></div>
       <div class="setrow"><div><div class="t">Late-game guard</div><div class="h">Warns in the last 2 minutes, when fouling and garbage time distort pace.</div></div><button class="sw" id="guard"></button></div>
+    </div>
+
+    <!-- ALERTS -->
+    <div class="body hide" id="v-alerts">
+      <h2>ALERTS</h2>
+      <div class="grid" id="aGrid"></div>
+      <div id="aList" style="margin-top:12px"></div>
+      <button class="wide" id="aClear">Clear alert history</button>
     </div>
 
     <!-- LOG -->
@@ -235,10 +257,10 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
       <h2>DASHBOARD</h2>
       <div class="grid" id="dGrid"></div>
       <div class="sbars" id="dBars"></div>
-      <button class="wide" id="clearAll">Clear all history</button>
+      <button class="wide" id="clearAll">Clear alert history</button>
     </div>
 
-    <div class="ft" id="ver">sportBasket v1.2.1 · tracks your picks, places no bets</div>
+    <div class="ft" id="ver">sportBasket v1.7.0 · tracks your picks, places no bets</div>
   </div>
 </div>
 
@@ -248,7 +270,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
     NBA:{periods:4,len:12,lab:"Q"}, FIBA:{periods:4,len:10,lab:"Q"}, NCAAM:{periods:2,len:20,lab:"H"}
   };
   const OT = 5;
-  const D = {line:224.5,home:0,away:0,period:1,clock:"12:00",thr:4,format:"NBA",minSample:6,regress:60,limit:5,guard:true,theme:"dark",min:false,tab:"totals",pick:null,history:[],gameId:"",lines:{},leagueFilter:"",auto:false,every:60,timerMode:"elapsed",proxy:""};
+  const D = {line:224.5,home:0,away:0,period:1,clock:"12:00",thr:4,format:"NBA",minSample:6,regress:60,limit:5,guard:true,theme:"dark",min:false,tab:"totals",pick:null,history:[],qs:[],gameId:"",lines:{},leagueFilter:"",auto:true,every:20,timerMode:"elapsed",proxy:"",liveOnly:true,alertsOn:true,sound:true,minScore:60,scanAll:true,awake:true,alerts:[],alerted:{},unseen:0};
   let S = JSON.parse(JSON.stringify(D)), view = "totals";
   try { const x = JSON.parse(localStorage.getItem("sportbasket")); if (x) S = Object.assign({}, D, x); } catch(e){}
   const save = () => { try { localStorage.setItem("sportbasket", JSON.stringify(S)); } catch(e){} };
@@ -259,15 +281,51 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
   const todayKey = () => new Date().toDateString();
   const clock = t => { t=String(t).trim(); if(!t) return null; if(t.includes(":")){const[a,b]=t.split(":");const m=parseInt(a,10),s=parseInt(b||"0",10);return isNaN(m)||isNaN(s)?null:m+s/60} const v=parseFloat(t); return isNaN(v)?null:v; };
 
+  // Quarter model: average points per finished quarter (shrunk toward the book line's own per-quarter pace),
+  // plus the current quarter's live rate. Returns null when quarter scores are not available.
+  function qModel(s,f,p,rem,pl,score,line){
+    if(p>f.periods) return null;
+    const n=rem<=0?p:p-1;                         // quarters fully finished
+    const qs=(s.qs||[]).slice(0,n);
+    if(n<1||qs.length<n||qs.some(v=>typeof v!=="number"||isNaN(v))) return null;
+    const sum=qs.reduce((x,y)=>x+y,0), avg=sum/n, prior=line/f.periods;
+    const w=n/(n+1.5), expQ=w*avg+(1-w)*prior;      // trust the live average more as quarters pile up
+    const inCur=n<p, curEl=inCur?pl-rem:0, curRemain=inCur?rem:0, curPts=score-sum, expRate=expQ/pl;
+    const wc=Math.min(.8,curEl/pl);
+    const curRate=curEl>.5?wc*(curPts/curEl)+(1-wc)*expRate:expRate;
+    const fullLeft=f.periods-p;                     // whole quarters still to play after the current one
+    const proj=score+curRemain*curRate+fullLeft*expQ;
+    const sd=n>1?Math.sqrt(qs.reduce((x,y)=>x+(y-avg)*(y-avg),0)/(n-1)):0;
+    return {proj,avg,expQ,qs,sd,n};
+  }
   function calc(s){
     const f=FORMATS[s.format], reg=f.periods*f.len, ot=s.period>f.periods, otN=ot?s.period-f.periods:0, pl=ot?OT:f.len;
     let rem=clock(s.clock); if(rem==null) rem=pl; rem=Math.max(0,Math.min(pl,rem));
     const base=ot?reg+(otN-1)*OT:(s.period-1)*f.len, el=base+(pl-rem), tot=ot?reg+otN*OT:reg, left=Math.max(0,tot-el);
     const score=(+s.home||0)+(+s.away||0), line=+s.line||0, pre=line/reg, live=el>0?score/el:pre;
-    const w=Math.min(.9,(el/reg)*(s.regress/50)), rate=w*live+(1-w)*pre, proj=score+left*rate, edge=proj-line;
+    const w=Math.min(.9,(el/reg)*(s.regress/50)), rate=w*live+(1-w)*pre, projPace=score+left*rate;
+    const qm=qModel(s,f,s.period,rem,pl,score,line);
+    const proj=qm?qm.proj:projPace, edge=proj-line;
     const need=left>0?(line-score)/left:null, ready=el>=s.minSample;
-    let sig="WAIT"; if(left===0&&el>0) sig="FINAL"; else if(ready){ sig=edge>=s.thr?"OVER":edge<=-s.thr?"UNDER":"NO EDGE"; }
-    return {el,left,tot,score,line,live,proj,edge,need,sig,late:left>0&&left<=2,pl};
+    const prog=tot?el/tot:0, eff=s.thr*(prog<.25?2:prog<.45?1.5:1);   // early in the game the edge must be bigger
+    let sig="WAIT";
+    if(left===0&&el>0) sig="FINAL";
+    else if(ready){ const ab=Math.abs(edge); sig=ab>=eff?(edge>0?"OVER":"UNDER"):ab>=s.thr?(edge>0?"LEAN OVER":"LEAN UNDER"):"NO EDGE"; }
+    return {el,left,tot,score,line,live,proj,projPace,qm,prog,eff,edge,need,sig,late:left>0&&left<=2,pl,margin:Math.abs((+s.home||0)-(+s.away||0))};
+  }
+  // When to act as the game goes on
+  function timing(c){
+    if(c.sig==="FINAL") return {t:"Game over",d:"Log your result below."};
+    const strong=c.sig==="OVER"||c.sig==="UNDER", p=c.prog;
+    let t,d;
+    if(p<.25){ t="Too early"; d="Wait for the end of the first quarter. One full quarter gives the first real read."; }
+    else if(p<.45){ t="Watch"; d=strong?`The edge clears the raised early bar of ±${f1(c.eff)}, but only about one quarter is sampled. Keep it small, or wait for halftime.`:"Not yet. Wait for halftime, when half the game has been sampled."; }
+    else if(p<.70){ t="Best window"; d=strong?`The edge clears ±${f1(c.eff)}, and half the game or more is sampled. This is the window to act.`:"This is the best stretch to act, but there is no edge yet. Keep watching until about the middle of the third quarter."; }
+    else if(p<.88){ t="Getting late"; d=strong?"The edge is there, but little time is left for the pace to hold. Take it only if you trust the line.":"Little time left to build an edge. Likely sit this one out."; }
+    else { t="Avoid"; d="Fouling and garbage time swing the total, and the live market line has already moved."; }
+    if(c.qm&&c.qm.n>1&&c.qm.sd>7) d+=` Quarter scoring has been uneven (spread ±${f1(c.qm.sd)}), so trust it less.`;
+    if(c.margin>=20&&p>=.45) d+=" A lead of 20+ can change how both teams score late. Be careful.";
+    return {t,d};
   }
 
   const todays = () => S.history.filter(h => h.day === todayKey());
@@ -285,13 +343,13 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
   function render(skip){
     document.body.classList.toggle("light",S.theme==="light");
     $("panel").classList.toggle("min",S.min);
-    ["totals","settings","log","dash"].forEach(v=>$("v-"+v).classList.toggle("hide",view!==v));
-    document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.t===(view==="settings"?"settings":"totals")));
+    ["totals","alerts","settings","log","dash"].forEach(v=>$("v-"+v).classList.toggle("hide",view!==v));
+    document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.t===(view==="settings"?"settings":view==="alerts"?"alerts":"totals")));
     $("badge").textContent=S.format; $("fmtSel").value=S.format;
     document.querySelectorAll("#periods .chip").forEach(b=>b.classList.toggle("on",+b.dataset.p===S.period));
     document.querySelectorAll("#fmtSeg button").forEach(b=>b.classList.toggle("on",b.dataset.f===S.format));
     $("guard").classList.toggle("on",S.guard);
-    if(!skip){ const set=(id,v)=>{const e=$(id); if(document.activeElement!==e) e.value=v;}; set("thr",S.thr);set("home",S.home);set("away",S.away);set("clock",S.clock);set("line",S.line);set("minSample",S.minSample);set("regress",S.regress);set("limit",S.limit); }
+    if(!skip){ const set=(id,v)=>{const e=$(id); if(document.activeElement!==e) e.value=v;}; set("thr",S.thr);set("home",S.home);set("away",S.away);set("clock",S.clock);set("line",S.line);set("minSample",S.minSample);set("regress",S.regress); }
 
     const c=calc(S), f=FORMATS[S.format];
     $("proj").textContent=c.line?f1(c.proj):"—";
@@ -301,51 +359,50 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
     const e=$("edge"); e.textContent=sg(c.edge); e.className="v "+(c.edge>.05?"pos":c.edge<-.05?"neg":"");
     $("need").textContent=c.need==null?"—":f1(c.need);
     $("pace").textContent=c.el>0?f1(c.live):"—";
+    $("qavg").textContent=c.qm?f1(c.qm.avg):"—"; $("meth").textContent=c.qm?"Quarters":"Pace";
     $("game").textContent=`${f1(c.el)} / ${c.tot}`;
 
-    const t=todays(), net=t.reduce((a,h)=>a+(h.result?units(h):0),0), left=Math.max(0,S.limit-t.length);
-    $("tTag").textContent=`${t.length}/${S.limit}`;
-    const tn=$("tNet"); tn.textContent=(net>=0?"+":"−")+Math.abs(net).toFixed(1)+"u"; tn.className="v "+(net>0?"pos":net<0?"neg":"");
-    const pct=Math.min(100,(t.length/Math.max(1,S.limit))*100);
-    $("tFill").style.width=pct+"%"; $("tKnob").style.left=Math.max(1,Math.min(99,pct))+"%";
-    $("tLeft").textContent=left?`${left} pick${left>1?"s":""} left`:"limit reached";
-
-    const dotc=c.sig==="OVER"?"o":c.sig==="UNDER"?"u":"";
+        const dotc=c.sig==="OVER"?"o":c.sig==="UNDER"?"u":"";
     $("sdot").className="dot "+(c.sig==="OVER"?"":c.sig==="UNDER"?"u":"o");
-    $("sTxt").textContent=c.sig==="OVER"||c.sig==="UNDER"?c.sig+" signal":c.sig==="NO EDGE"?"No edge":c.sig==="FINAL"?"Final":"Waiting";
+    $("sTxt").textContent=c.sig==="OVER"||c.sig==="UNDER"?c.sig+" signal":c.sig.startsWith("LEAN")?"Lean "+c.sig.slice(5).toLowerCase():c.sig==="NO EDGE"?"No edge":c.sig==="FINAL"?"Final":"Waiting";
     $("sSub").textContent=`· line ${f1(c.line)}`;
     let sb;
     if(c.sig==="OVER"||c.sig==="UNDER") sb=`Projected <span class="am">${f1(c.proj)}</span> is <b>${f1(Math.abs(c.edge))}</b> pts ${c.sig==="OVER"?"above":"below"} the <b>${f1(c.line)}</b> line, past your <b>${f1(S.thr)}</b> threshold.`;
+    else if(c.sig.startsWith("LEAN")) sb=`Leaning <b>${c.sig.slice(5)}</b>: projected <span class="am">${f1(c.proj)}</span> is <b>${f1(Math.abs(c.edge))}</b> pts from the line. Early in the game the bar is <span class="am">±${f1(c.eff)}</span>, so treat it as a lean, not a signal.`;
     else if(c.sig==="NO EDGE") sb=`Projection is only <b>${f1(Math.abs(c.edge))}</b> pts from the line. Needs <span class="am">${f1(S.thr)}</span> for a signal.`;
     else if(c.sig==="FINAL") sb=`Game over at <b>${c.score}</b> vs line <b>${f1(c.line)}</b>. Log the result below.`;
     else sb=`Enter scores and the clock. Signals start after <span class="am">${S.minSample}</span> min of game time.`;
     if(S.guard&&c.late) sb+=` <b style="color:var(--amber)">Final 2 minutes: fouling can swing the total.</b>`;
     $("sbox").innerHTML=sb;
+    const fq=FORMATS[S.format];
+    $("qstrip").innerHTML=c.qm?`<b>Quarters</b> &nbsp;${c.qm.qs.map((v,i)=>`${fq.lab}${i+1} <b>${v}</b>`).join(" · ")} &nbsp;|&nbsp; average <span class="am">${f1(c.qm.avg)}</span> · next quarters projected at <span class="am">${f1(c.qm.expQ)}</span> each`:`Quarter scores load when you pick a live game that has finished at least one quarter. Until then the projection uses the game's overall pace.`;
+    const tm=timing(c); $("timing").innerHTML=`<b>Bet timing: <span class="am">${tm.t}</span></b><br>${tm.d}${(c.sig==="OVER"||c.sig==="UNDER"||c.sig.startsWith("LEAN"))?`<br>Signal quality <b>${quality(c)}/100</b>`:""}`;
     $("swTxt").textContent=`Game clock · ${f1(c.el)} / ${c.tot}`; $("swE").textContent=S.format;
     $("swBar").style.width=Math.min(100,c.el/c.tot*100)+"%";
 
-    $("bOver").classList.toggle("on",!!S.pick&&S.pick.side==="OVER");
-    $("bUnder").classList.toggle("on",!!S.pick&&S.pick.side==="UNDER");
-    $("pbox").innerHTML=S.pick?`Pick open: <b>${S.pick.side} ${f1(S.pick.line)}</b>. Tap WIN, LOSS or PUSH when the game ends.`:`Press <b>OVER</b> or <b>UNDER</b> to log a pick at <b>${f1(c.line)}</b>. Nothing is bet for you.`;
     renderApi();
     $("pillTxt").textContent=S.min&&(c.sig==="OVER"||c.sig==="UNDER")?`${c.sig} ${sg(c.edge)}`:"SPORTBASKET";
   }
 
   function renderLog(){
-    const t=todays().slice().reverse();
-    $("logList").innerHTML=t.length?t.map(h=>`<div class="li"><span class="s ${h.side}">${h.side}</span><div>${f1(h.line)} line<small>${h.time} · ${h.fmt}${h.score!=null?` · ${h.score} pts at pick`:""}</small></div><span class="r ${h.result==="WIN"?"pos":h.result==="LOSS"?"neg":"mu"}">${h.result||"OPEN"}</span></div>`).join(""):`<div class="empty">No picks yet today.</div>`;
+    const t0=new Date(); t0.setHours(0,0,0,0);
+    const t=S.alerts.filter(a=>a.ts>=t0.getTime());
+    $("logList").innerHTML=t.length?t.map(a=>`<div class="li"><span class="s ${a.side}">${a.side}</span><div>${esc(a.label)}<small>${f1(a.line)} line · proj ${f1(a.proj)} · ${a.per} ${esc(a.clock)} · quality ${a.q}${a.final!=null?` · final ${a.final}`:""} · ${new Date(a.ts).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})}</small></div><span class="r ${a.status==="WIN"?"pos":a.status==="LOSS"?"neg":"mu"}">${a.status==="open"?"OPEN":a.status}</span></div>`).join(""):`<div class="empty">No alerts yet today.</div>`;
   }
   function renderDash(){
-    const all=S.history.filter(h=>h.result), w=all.filter(h=>h.result==="WIN").length, l=all.filter(h=>h.result==="LOSS").length, p=all.length-w-l, net=w-l;
+    const all=S.alerts.filter(a=>a.status==="WIN"||a.status==="LOSS"||a.status==="PUSH");
+    const w=all.filter(a=>a.status==="WIN").length, l=all.filter(a=>a.status==="LOSS").length, p=all.length-w-l, net=w-l;
     const cell=(a,b,cl)=>`<div class="cell"><div class="lbl">${a}</div><div class="v ${cl||""}">${b}</div></div>`;
-    $("dGrid").innerHTML=cell("Picks",all.length)+cell("Hit rate",w+l?Math.round(w/(w+l)*100)+"%":"—")+cell("Record",`${w}-${l}-${p}`)+cell("Net units",(net>=0?"+":"−")+Math.abs(net)+"u",net>0?"pos":net<0?"neg":"");
-    const side=s=>{const x=all.filter(h=>h.side===s&&h.result!=="PUSH"),ww=x.filter(h=>h.result==="WIN").length;return {n:x.length,r:x.length?ww/x.length*100:0}};
+    $("dGrid").innerHTML=cell("Alerts settled",all.length)+cell("Hit rate",w+l?Math.round(w/(w+l)*100)+"%":"—")+cell("Record",`${w}-${l}-${p}`)+cell("Net units",(net>=0?"+":"−")+Math.abs(net)+"u",net>0?"pos":net<0?"neg":"");
+    const side=s=>{const x=all.filter(a=>a.side===s&&a.status!=="PUSH"),ww=x.filter(a=>a.status==="WIN").length;return {n:x.length,r:x.length?ww/x.length*100:0}};
     const o=side("OVER"),u=side("UNDER");
-    $("dBars").innerHTML=`<div class="lbl" style="font-size:11px">Hit rate by side</div><div class="br"><span>OVER</span><div class="tr"><i style="width:${o.r}%"></i></div><span style="width:auto;color:var(--tx)">${o.n?Math.round(o.r)+"%":"—"}</span></div><div class="br"><span>UNDER</span><div class="tr"><i style="width:${u.r}%;background:var(--red)"></i></div><span style="width:auto;color:var(--tx)">${u.n?Math.round(u.r)+"%":"—"}</span></div>`;
+    const tier=(lo,hi)=>{const x=all.filter(a=>a.q>=lo&&a.q<=hi&&a.status!=="PUSH"),ww=x.filter(a=>a.status==="WIN").length;return {n:x.length,r:x.length?ww/x.length*100:0}};
+    const hi=tier(80,100), mid=tier(60,79), lo=tier(0,59);
+    const bar=(name,v,col)=>`<div class="br"><span>${name}</span><div class="tr"><i style="width:${v.r}%;${col?"background:"+col:""}"></i></div><span style="width:auto;color:var(--tx)">${v.n?Math.round(v.r)+"% ("+v.n+")":"—"}</span></div>`;
+    $("dBars").innerHTML=`<div class="lbl" style="font-size:11px">Hit rate by side</div>${bar("OVER",o)}${bar("UNDER",u,"var(--red)")}<div class="lbl" style="font-size:11px;margin-top:16px">Hit rate by signal quality</div>${bar("80-100",hi)}${bar("60-79",mid)}${bar("under 60",lo)}`;
   }
-
   const msg = (t) => { const m=$("msg"); m.textContent=t; m.style.display="block"; const g=$("toast"); g.textContent=t; g.style.display="block"; clearTimeout(msg.t); msg.t=setTimeout(()=>{m.style.display="none";g.style.display="none";},6000); };
-  const go = v => { view=v; if(v==="log")renderLog(); if(v==="dash")renderDash(); render(); window.scrollTo(0,0); };
+  const go = v => { view=v; if(v==="log")renderLog(); if(v==="dash")renderDash(); if(v==="alerts"){S.unseen=0;save();renderAlerts();} render(); window.scrollTo(0,0); };
   const upd = fn => { fn(); save(); render(); };
   const num = (v,d) => { const n=parseFloat(v); return isNaN(n)?d:n; };
 
@@ -361,30 +418,359 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
     if(t.dataset.p) return upd(()=>{S.period=+t.dataset.p; const f=FORMATS[S.format]; S.clock=(S.period>f.periods?OT:f.len)+":00";});
     if(t.dataset.f) return setFormat(t.dataset.f);
     if(t.dataset.s) return upd(()=>{const k=t.dataset.s; S[k]=Math.max(0,Math.round((num(S[k],0)+ +t.dataset.d)*10)/10);});
-    if(t.id==="bOver"||t.id==="bUnder"){
-      const side=t.id==="bOver"?"OVER":"UNDER";
-      if(S.pick&&S.pick.side===side) return upd(()=>S.pick=null);
-      if(!S.pick && todays().length>=S.limit){ return msg(`Daily limit of ${S.limit} picks reached.`); }
-      return upd(()=>{ const c=calc(S); S.pick={side,line:S.line,score:c.score,fmt:S.format,time:new Date().toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}; });
-    }
-    if(t.dataset.r){
-      if(!S.pick) return msg("Press OVER or UNDER first, then log the result.");
-      return upd(()=>{ S.history.push(Object.assign({}, S.pick, {result:t.dataset.r, day:todayKey()})); S.pick=null; });
-    }
-    if(t.id==="end") return upd(()=>{S.home=0;S.away=0;S.period=1;S.clock=FORMATS[S.format].len+":00";S.pick=null; msg("Session ended. Scores reset; your log is kept.");});
+    if(t.id==="end") return upd(()=>{S.home=0;S.away=0;S.qs=[];S.period=1;S.clock=FORMATS[S.format].len+":00";S.pick=null; msg("Session ended. Scores reset; your log is kept.");});
     if(t.id==="goLog") return go("log");
     if(t.id==="goDash") return go("dash");
-    if(t.id==="clearAll") return upd(()=>{S.history=[]; renderDash();});
+    if(t.id==="clearAll") return upd(()=>{S.alerts=[]; S.alerted={}; S.unseen=0; renderDash();});
   });
   function setFormat(k){ upd(()=>{S.format=k; S.period=1; S.clock=FORMATS[k].len+":00"; buildStatic();}); }
   $("fmtSel").addEventListener("change",e=>setFormat(e.target.value));
 
   const bind=(id,key,int)=>$(id).addEventListener("input",e=>{S[key]=int?Math.round(num(e.target.value,0)):num(e.target.value,0);save();render(true);});
-  [["thr","thr"],["line","line"],["home","home",1],["away","away",1],["minSample","minSample",1],["regress","regress",1],["limit","limit",1]].forEach(a=>bind(...a));
+  [["thr","thr"],["line","line"],["home","home",1],["away","away",1],["minSample","minSample",1],["regress","regress",1]].forEach(a=>bind(...a));
   $("clock").addEventListener("input",e=>{S.clock=e.target.value;save();render(true);});
   document.querySelectorAll("input").forEach(i=>i.addEventListener("focus",()=>i.select()));
 
-  buildStatic(); render();
+
+  // ================= API-BASKETBALL (live data) =================
+  const KEYNAME="sportbasketKey";
+  let games=[], gamesAll=[], remaining=null, limitDay=null, busy=false, note="", hasKey=false, loaded=false;
+  const pad=n=>String(n).padStart(2,"0");
+  const BASE="https://v1.basketball.api-sports.io";
+  const getKey=()=>{try{return localStorage.getItem(KEYNAME)||""}catch(e){return ""}};
+  async function api(path){
+    const base=(S.proxy||BASE).replace(/\/+$/,""), headers={};
+    if(!S.proxy){ const k=getKey(); if(!k) return {error:"No API key saved. Add it in Settings."}; headers["x-apisports-key"]=k; }
+    try{
+      const resp=await fetch(base+path,{headers});
+      const data=await resp.json().catch(()=>null);
+      return {ok:resp.ok,status:resp.status,remaining:resp.headers.get("x-ratelimit-requests-remaining"),limit:resp.headers.get("x-ratelimit-requests-limit"),data};
+    }catch(e){
+      return {error:S.proxy?"Could not reach your proxy. Check the URL in Settings.":"The browser could not reach the API directly (it may block web pages, or you are offline). Set up the proxy from the README and paste its URL in Settings."};
+    }
+  }
+  const apiErr=r=>{ if(r.error) return r.error; const e=r.data&&r.data.errors; if(e&&(Array.isArray(e)?e.length:Object.keys(e).length)) return typeof e==="string"?e:JSON.stringify(e); if(r.status&&r.status>=400) return "HTTP "+r.status; return null; };
+  const trackQuota=r=>{ if(r&&r.remaining!=null&&r.remaining!=="") remaining=r.remaining; if(r&&r.limit!=null&&r.limit!=="") limitDay=r.limit; };
+
+  function periodFromStatus(sh){ sh=String(sh||"").toUpperCase(); let m=/^Q([1-4])$/.exec(sh)||/^H([1-2])$/.exec(sh); if(m) return +m[1]; if(sh==="HT") return 2; if(sh==="OT"||sh==="AOT") return 5; return null; }
+  function pickFormat(g){
+    const n=(((g.league&&g.league.name)||"")+" "+((g.country&&g.country.name)||"")).toLowerCase();
+    const women=/women|wnba|\bw\b|female|feminin/.test(n)||/\bw$/i.test((g.teams&&g.teams.home&&g.teams.home.name)||"");
+    if(/\bnba\b/.test(n)&&!women) return "NBA";            // NBA and NBA G League: 4 x 12
+    if(/ncaa|college/.test(n)) return women?"FIBA":"NCAAM";  // men: 2 x 20, women: 4 x 10
+    return "FIBA";                                            // WNBA and most leagues worldwide: 4 x 10
+  }
+  const fmtClock=rem=>{ const sec=Math.max(0,Math.round(rem*60)); return Math.floor(sec/60)+":"+pad(sec%60); };
+  // minutes left in the current period, from what the API reports (null if it reports no clock)
+  function gameClockMin(g,fmtKey,mode,period){
+    const f=FORMATS[fmtKey], sh=String((g.status&&g.status.short)||"").toUpperCase(), per=period>f.periods?OT:f.len;
+    if(sh==="HT") return {min:0,exact:true};
+    if(sh==="NS") return {min:per,exact:true};
+    const raw=g.status&&g.status.timer; if(raw==null||raw==="") return null;
+    const sraw=String(raw).trim(); let t, exact=false;
+    if(sraw.includes(":")){ const [mm,ss]=sraw.split(":"); t=parseFloat(mm)+(parseFloat(ss)||0)/60; exact=true; }
+    else t=parseFloat(sraw.replace(",","."));
+    if(isNaN(t)) return null;
+    let rem=mode==="elapsed"?per-t:t; rem=Math.max(0,Math.min(per,rem));
+    return {min:rem,exact};
+  }
+  function mapGame(g,mode){
+    const sh=String((g.status&&g.status.short)||"").toUpperCase();
+    const fmtKey=pickFormat(g);
+    const p=sh==="NS"?1:periodFromStatus(sh);
+    const sc=g.scores||{}, h=sc.home&&sc.home.total, a=sc.away&&sc.away.total;
+    const qs=[]; for(let i=1;i<=4;i++){ const hq=sc.home&&sc.home["quarter_"+i], aq=sc.away&&sc.away["quarter_"+i]; qs.push(hq!=null&&aq!=null?+hq+ +aq:null); }
+    const out={id:String(g.id),fmt:fmtKey,period:p,clock:null,clockMin:null,exact:false,running:/^(Q[1-4]|OT|H[12])$/.test(sh),timerRaw:(g.status&&g.status.timer)==null?"":String(g.status.timer),home:h==null?0:+h,away:a==null?0:+a,qs,
+      label:`${(g.teams&&g.teams.home&&g.teams.home.name)||"Home"} vs ${(g.teams&&g.teams.away&&g.teams.away.name)||"Away"}`,status:sh,league:(g.league&&g.league.name)||""};
+    if(p){ const gc=gameClockMin(g,fmtKey,mode,p); if(gc){ out.clockMin=gc.min; out.exact=gc.exact; out.clock=fmtClock(gc.min); } }
+    return out;
+  }
+  function parseOdds(resp){
+    const out=[]; const items=(resp&&resp.response)||[];
+    for(const it of items) for(const b of (it.bookmakers||[])) for(const bet of (b.bets||[])){
+      if(!/^over\/under$/i.test(String(bet.name||"").trim())) continue;
+      const m={};
+      for(const v of (bet.values||[])){ const mm=/^(over|under)\s+([\d.]+)/i.exec(String(v.value).trim()); if(!mm) continue; (m[mm[2]]=m[mm[2]]||{})[mm[1].toLowerCase()]=parseFloat(v.odd); }
+      const lines=Object.keys(m).filter(k=>m[k].over&&m[k].under).map(k=>({line:parseFloat(k),gap:Math.abs(m[k].over-m[k].under)})).sort((x,y)=>x.gap-y.gap);
+      if(lines.length) out.push({book:b.name,line:lines[0].line});
+    }
+    return out;
+  }
+  const median=a=>{const s=a.slice().sort((x,y)=>x-y),n=s.length;return n?(n%2?s[(n-1)/2]:(s[n/2-1]+s[n/2])/2):null;};
+
+  let ref=null; // local countdown reference: {key,t,rem,exact}
+  function applyGame(m){
+    S.format=m.fmt; buildStatic();
+    S.home=m.home; S.away=m.away; S.qs=m.qs||[];
+    if(m.period){
+      S.period=Math.min(m.period,FORMATS[S.format].periods+1);
+      if(m.running&&m.clockMin!=null){
+        const key=m.id+"|"+m.period+"|"+m.timerRaw;
+        if(!ref||ref.key!==key){ ref={key,t:Date.now(),rem:m.clockMin,exact:m.exact}; if(m.clock!=null) S.clock=m.clock; }
+        // same API value as last time: keep the locally counting clock, do not jump back
+      } else { ref=null; if(m.clock!=null) S.clock=m.clock; }
+    }
+    if(S.lines[m.id]) S.line=S.lines[m.id];
+  }
+  // counts the clock down every second between data refreshes (the real clock stops on dead balls, so refreshes re-sync it)
+  function tick(){
+    if(!ref||!S.gameId) return;
+    let rem=ref.rem-(Date.now()-ref.t)/60000;
+    rem=Math.max(ref.exact?0:Math.max(0,ref.rem-1),rem);
+    const txt=fmtClock(rem);
+    if(txt!==S.clock){ S.clock=txt; const e=$("clock"); if(document.activeElement!==e) e.value=txt; render(true); }
+  }
+  setInterval(tick,1000);
+  async function loadOdds(id){
+    const r=await api("/odds?game="+encodeURIComponent(id)); trackQuota(r);
+    const e=apiErr(r); if(e){ note="Odds: "+e; return false; }
+    const o=parseOdds(r.data);
+    if(!o.length){ note="No Over/Under odds for this game. Enter the line by hand."; return false; }
+    const line=median(o.map(x=>x.line)); S.lines[id]=line; S.line=line;
+    note=`Line ${f1(line)} from ${o.length} bookmaker${o.length>1?"s":""} (pre-match odds)`;
+    return true;
+  }
+  function fillGames(){
+    const sel=$("gameSel"), cur=S.gameId;
+    sel.innerHTML='<option value="">Manual entry</option>'+games.map(g=>`<option value="${g.id}">${esc(g.label)} · ${g.status==="NS"?"not started":g.status} · ${g.home}-${g.away}</option>`).join("");
+    if(cur&&!games.find(g=>g.id===cur)){ sel.insertAdjacentHTML("beforeend",`<option value="${cur}">${loaded?"Selected game (not live now)":"Selected game (loading…)"}</option>`); }
+    sel.value=cur||"";
+  }
+  const isLive=sh=>/^(Q[1-4]|OT|HT|BT|H[12])$/.test(sh);
+  const dateStr=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+  async function loadGames(){
+    if(busy) return; busy=true; note="Loading games…"; render(true);
+    let tz=""; try{ tz=Intl.DateTimeFormat().resolvedOptions().timeZone||""; }catch(e){}
+    const base="/games?date="+dateStr(new Date());
+    let r=await api(base+(tz?"&timezone="+encodeURIComponent(tz):""));
+    if(tz&&apiErr(r)&&/timezone/i.test(apiErr(r))) r=await api(base);
+    trackQuota(r);
+    busy=false;
+    const e=apiErr(r);
+    if(e){ note=/key/i.test(e)&&!hasKey?"Add your API key in Settings.":e; render(true); return; }
+    const flt=(S.leagueFilter||"").trim().toLowerCase();
+    const mappedAll=((r.data&&r.data.response)||[]).map(g=>mapGame(g,S.timerMode)); gamesAll=mappedAll;
+    const list=mappedAll.filter(m=>!flt||m.league.toLowerCase().includes(flt));
+    const rank=m=>isLive(m.status)?0:m.status==="NS"?1:2;
+    const shown=(S.liveOnly?list.filter(m=>isLive(m.status)):list).sort((x,y)=>rank(x)-rank(y)||x.label.localeCompare(y.label));
+    games=shown.slice(0,80);
+    const nLive=list.filter(m=>isLive(m.status)).length;
+    loaded=true; const upd=new Date().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
+    note=games.length?`${nLive} live · ${games.length} listed · updated ${upd}`:(S.liveOnly?`No live games right now (${list.length} games today). Turn off "Live games only" in Settings to see them all.`:"No games found for today.")+(games.length?"":` · updated ${upd}`);
+    fillGames();
+    const sel=list.find(g=>g.id===S.gameId);
+    if(sel){ applyGame(sel); if(isLive(sel.status)&&sel.clock==null) note+=" · clock not provided, enter it by hand"; }
+    await runAlerts(mappedAll,list);
+    save(); render();
+  }
+
+  // ================= ALERTS =================
+  const esc=s=>String(s).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+  let banner=null, scanning=false; const noLine=new Set(); const origTitle=document.title;
+
+  // 0-100 score for how much to trust a signal. The size of the edge sets the base; bad conditions cut it down:
+  // wrong stage of the game, the two models disagreeing, uneven quarter scores, or a blowout (garbage time).
+  function quality(c){
+    const ratio=Math.abs(c.edge)/Math.max(.5,c.eff);
+    const base=Math.min(100,35*ratio);                                       // ratio 1 = 35, 2 = 70, 3+ = 100
+    const stage=c.prog>=.45&&c.prog<.70?1:((c.prog>=.25&&c.prog<.45)||(c.prog>=.70&&c.prog<.88))?.85:.6;
+    const agree=!c.qm?.9:(Math.sign(c.projPace-c.line)===Math.sign(c.edge)?1:.6);
+    const steady=!c.qm?.95:c.qm.sd<=4?1:c.qm.sd<=7?.9:.75;
+    const close=(c.margin>=25&&c.prog>=.3)?.4:c.margin>=25?.6:c.margin>=15?.85:1;
+    return Math.max(0,Math.round(base*stage*agree*steady*close));
+  }
+  async function fetchLine(id){
+    if(S.lines[id]) return S.lines[id];
+    if(noLine.has(id)) return null;
+    const r=await api("/odds?game="+encodeURIComponent(id)); trackQuota(r);
+    if(apiErr(r)){ noLine.add(id); return null; }
+    const o=parseOdds(r.data); if(!o.length){ noLine.add(id); return null; }
+    S.lines[id]=median(o.map(x=>x.line)); return S.lines[id];
+  }
+  let actx=null;
+  function unlockAudio(){ try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); if(actx.state==="suspended") actx.resume(); }catch(e){} }
+  function beep(){
+    if(!S.sound||!actx) return;
+    try{ const t=actx.currentTime; [[880,0],[1175,.2],[1480,.4]].forEach(([fr,d])=>{ const o=actx.createOscillator(), g=actx.createGain(); o.type="sine"; o.frequency.value=fr; g.gain.setValueAtTime(0,t+d); g.gain.linearRampToValueAtTime(.4,t+d+.02); g.gain.exponentialRampToValueAtTime(.001,t+d+.18); o.connect(g); g.connect(actx.destination); o.start(t+d); o.stop(t+d+.2); }); }catch(e){}
+  }
+  async function pushNote(title,body,tag){
+    try{
+      if(!("Notification" in window)||Notification.permission!=="granted") return;
+      const reg=navigator.serviceWorker&&navigator.serviceWorker.getRegistration?await navigator.serviceWorker.getRegistration():null;
+      const opt={body,tag,icon:"icons/icon-192.png",badge:"icons/icon-192.png",vibrate:[200,100,200]};
+      if(reg&&reg.showNotification) await reg.showNotification(title,opt); else new Notification(title,opt);
+    }catch(e){}
+  }
+  function alertText(a){ return {t:`${a.side} ${f1(a.line)} · ${a.label}`, d:`Projected ${f1(a.proj)} (${sg(a.edge)}) · ${a.per} ${a.clock} · quality ${a.q}/100`}; }
+  function notifyAll(a){
+    const x=alertText(a);
+    beep(); try{ navigator.vibrate&&navigator.vibrate([200,100,200]); }catch(e){}
+    if(!S.pushOn||a.gameId==="test") pushNote("sportBasket · "+x.t,x.d,"sb-"+a.gameId); try{ document.title="🔔 "+x.t; }catch(e){}
+  }
+  function fire(m,c,q){
+    const fq=FORMATS[m.fmt];
+    const a={id:Date.now()+"-"+m.id,gameId:m.id,label:m.label,league:m.league,side:c.sig,line:c.line,proj:+f1(c.proj),edge:+f1(c.edge),q,
+      per:m.period>fq.periods?"OT":fq.lab+m.period,clock:m.clock,ts:Date.now(),status:"open",final:null};
+    S.alerts.unshift(a); if(S.alerts.length>100) S.alerts.length=100;
+    S.unseen=(S.unseen||0)+1; banner=a; notifyAll(a);
+  }
+  // marks finished games: WIN / LOSS / PUSH against the line the alert was sent at
+  async function settle(all){
+    for(const a of S.alerts){
+      if(a.status!=="open") continue;
+      let m=all.find(x=>x.id===a.gameId);
+      if(!m&&Date.now()-a.ts>4*3600*1000&&!a.tried){   // game fell out of today's list: look it up once
+        a.tried=true; const r=await api("/games?id="+encodeURIComponent(a.gameId)); trackQuota(r);
+        const g=!apiErr(r)&&r.data&&r.data.response&&r.data.response[0]; if(g) m=mapGame(g,S.timerMode);
+      }
+      if(!m) continue;
+      if(/^(FT|AOT)$/.test(m.status)){
+        const tot=m.home+m.away; a.final=tot;
+        a.status=tot===a.line?"PUSH":(a.side==="OVER"?(tot>a.line?"WIN":"LOSS"):(tot<a.line?"WIN":"LOSS"));
+      } else if(/^(CANC|POST|ABD|AWD)$/.test(m.status)) a.status="VOID";
+    }
+  }
+  async function runAlerts(all,list){
+    if(scanning) return; scanning=true;
+    try{
+      await settle(all);
+      if(S.alertsOn){
+        let budget=6;
+        const cands=list.filter(m=>isLive(m.status)&&m.period&&m.clock!=null&&(S.scanAll||m.id===S.gameId));
+        for(const m of cands){
+          const st0=Object.assign({},S,{line:S.lines[m.id]||100,home:m.home,away:m.away,period:m.period,clock:m.clock,format:m.fmt,qs:m.qs});
+          const c0=calc(st0); if(c0.prog<.25||c0.prog>.88) continue;      // only the useful part of the game
+          let line=S.lines[m.id];
+          if(!line){ if(budget<=0||noLine.has(m.id)) continue; budget--; line=await fetchLine(m.id); if(!line) continue; }
+          const c=calc(Object.assign({},st0,{line}));
+          if(c.sig!=="OVER"&&c.sig!=="UNDER") continue;
+          const q=quality(c); if(q<S.minScore) continue;
+          const key=m.id+"|"+c.sig; if(S.alerted[key]) continue;
+          S.alerted[key]=1; fire(m,c,q);
+        }
+        const ks=Object.keys(S.alerted); if(ks.length>400) ks.slice(0,ks.length-300).forEach(k=>delete S.alerted[k]);
+      }
+      save(); render(true); if(view==="alerts") renderAlerts();
+    } finally { scanning=false; }
+  }
+  function renderAlerts(){
+    const al=S.alerts, w=al.filter(a=>a.status==="WIN").length, l=al.filter(a=>a.status==="LOSS").length, p=al.filter(a=>a.status==="PUSH").length, open=al.filter(a=>a.status==="open").length;
+    const cell=(a,b)=>`<div class="cell"><div class="lbl">${a}</div><div class="v">${b}</div></div>`;
+    $("aGrid").innerHTML=cell("Alerts",al.length)+cell("Open",open)+cell("Record",`${w}-${l}-${p}`)+cell("Hit rate",w+l?Math.round(w/(w+l)*100)+"%":"—");
+    $("aList").innerHTML=al.length?al.map(a=>`<div class="li"><span class="s ${a.side}">${a.side}</span><div>${esc(a.label)}<small>${f1(a.line)} line · proj ${f1(a.proj)} · ${a.per} ${esc(a.clock)} · quality ${a.q}${a.final!=null?` · final ${a.final}`:""} · ${new Date(a.ts).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})}</small></div><span class="r ${a.status==="WIN"?"pos":a.status==="LOSS"?"neg":"mu"}">${a.status==="open"?"OPEN":a.status}</span></div>`).join(""):`<div class="empty">No alerts yet. When a live game gets a strong signal, it shows up here.</div>`;
+  }
+  function viewAlert(a){
+    const m=gamesAll.find(x=>x.id===a.gameId); S.gameId=a.gameId; ref=null; banner=null;
+    if(m){ if(!games.find(x=>x.id===m.id)) games.push(m); applyGame(m); }
+    fillGames(); go("totals"); save();
+  }
+  let wl=null;
+  async function keepAwake(){ try{ if(S.alertsOn&&S.awake&&"wakeLock" in navigator&&!document.hidden&&!wl){ wl=await navigator.wakeLock.request("screen"); wl.addEventListener("release",()=>{wl=null;}); } }catch(e){} }
+  document.addEventListener("click",()=>{ unlockAudio(); keepAwake(); });
+  document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ keepAwake(); try{document.title=origTitle;}catch(e){} } });
+  window.addEventListener("focus",()=>{ try{document.title=origTitle;}catch(e){} });
+  document.addEventListener("click",ev=>{
+    const t=ev.target.closest("button"); if(!t) return;
+    const flip=k=>{ S[k]=!S[k]; save(); render(); };
+    if(t.id==="alertSw"){ flip("alertsOn"); if(S.alertsOn) keepAwake(); }
+    if(t.id==="scanSw") flip("scanAll");
+    if(t.id==="soundSw"){ flip("sound"); if(S.sound){ unlockAudio(); beep(); } }
+    if(t.id==="awakeSw"){ flip("awake"); if(S.awake) keepAwake(); else if(wl){ wl.release(); wl=null; } }
+    if(t.id==="notifBtn"){ try{ Notification.requestPermission().then(()=>render(true)); }catch(e){ msg("This browser does not support notifications."); } }
+    if(t.id==="testAlert"){ unlockAudio(); const a={gameId:"test",label:"Test Team A vs Test Team B",side:"OVER",line:200.5,proj:212.4,edge:11.9,q:82,per:"Q3",clock:"8:00"}; banner=a; notifyAll(a); render(true); }
+    if(t.id==="abarX"){ banner=null; render(true); }
+    if(t.id==="abarGo"&&banner){ if(banner.gameId==="test"){ banner=null; render(true); } else viewAlert(banner); }
+    if(t.id==="aClear"){ S.alerts=[]; S.alerted={}; S.unseen=0; save(); renderAlerts(); render(true); }
+  });
+  document.getElementById("minScore").addEventListener("input",e=>{ S.minScore=Math.round(num(e.target.value,60)); save(); });
+
+  // ---- phone alerts from your alert server (Web Push) ----
+  const unb64=s=>{s=s.replace(/-/g,"+").replace(/_/g,"/");while(s.length%4)s+="=";const r=atob(s),u=new Uint8Array(r.length);for(let i=0;i<r.length;i++)u[i]=r.charCodeAt(i);return u;};
+  const pushBase=()=>String(S.alertUrl||"").trim().replace(/\/+$/,"");
+  const pst=t=>{ const e=$("pushState"); if(e) e.textContent=t; };
+  async function pushEnable(){
+    const base=pushBase(), key=String(S.alertKey||"").trim();
+    if(!base||!key){ msg("Enter the alert server address and the alert key first."); return; }
+    if(!("serviceWorker" in navigator)||!("PushManager" in window)||!("Notification" in window)){ pst("This browser cannot receive push. On iPhone (iOS 16.4+): Share > Add to Home Screen, then open sportBasket from the Home Screen icon."); msg("Add sportBasket to your Home Screen first."); return; }
+    try{
+      pst("Connecting…");
+      const perm=await Notification.requestPermission(); if(perm!=="granted"){ pst("Notifications are blocked. Allow them for sportBasket in iPhone Settings > Notifications."); return; }
+      const r=await fetch(base+"/vapid",{headers:{"x-alert-key":key}}); const j=await r.json();
+      if(!r.ok||!j.key){ pst((j&&j.error)||"The server did not answer. Check the address and key."); return; }
+      const reg=await navigator.serviceWorker.ready;
+      let sub=await reg.pushManager.getSubscription();
+      if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:unb64(j.key)});
+      const r2=await fetch(base+"/subscribe",{method:"POST",headers:{"x-alert-key":key,"content-type":"application/json"},body:JSON.stringify(sub.toJSON())});
+      const j2=await r2.json(); if(!r2.ok){ pst(j2.error||"Could not register this phone."); return; }
+      S.pushOn=true; save(); pst("Phone alerts are on. This phone is registered with your alert server."); msg("Phone alerts are on.");
+    }catch(e){ pst("Could not connect: "+(e&&e.message?e.message:e)); }
+  }
+  async function pushTest(){
+    try{ const r=await fetch(pushBase()+"/test",{headers:{"x-alert-key":String(S.alertKey||"").trim()}}); const j=await r.json(); pst(j.message||j.error||"Done."); msg(j.message||j.error||"Done."); }
+    catch(e){ pst("Could not reach the server."); }
+  }
+  document.addEventListener("click",ev=>{ const t=ev.target.closest("button"); if(!t) return; if(t.id==="pushOn") pushEnable(); if(t.id==="pushTest") pushTest(); });
+  ["alertUrl","alertKey"].forEach(id=>{ const e=$(id); if(e){ e.value=S[id]||""; e.addEventListener("input",()=>{ S[id]=e.value; save(); }); } });
+  if(S.pushOn) pst("Phone alerts were turned on for this phone. Tap Send test to check.");
+
+  function renderApi(){
+    $("apiNote").textContent=note+(remaining!=null?` · ${remaining}${limitDay?"/"+limitDay:""} requests left`:"");
+    $("autoSw").classList.toggle("on",S.auto);
+    $("alertSw").classList.toggle("on",S.alertsOn); $("scanSw").classList.toggle("on",S.scanAll);
+    $("soundSw").classList.toggle("on",S.sound); $("awakeSw").classList.toggle("on",S.awake);
+    const perm=("Notification" in window)?Notification.permission:"unsupported";
+    $("notifState").textContent=perm==="granted"?"Notifications are on.":perm==="denied"?"Blocked. Allow them in your browser's site settings.":perm==="unsupported"?"This browser does not support notifications. Sound and the on-screen banner still work.":"Tap Enable to allow them. On iPhone, add the app to the Home Screen first.";
+    $("notifBtn").style.display=perm==="default"?"":"none";
+    const bd=$("aBadge"); bd.textContent=S.unseen||""; bd.style.display=S.unseen?"inline":"none";
+    const ab=$("alertbar");
+    if(banner){ const x=alertText(banner); ab.innerHTML=`<div class="tx"><b>${esc(x.t)}</b><br><span class="mu">${esc(x.d)}</span></div><button class="sm" id="abarGo">View</button><button class="sm" id="abarX">✕</button>`; ab.classList.remove("hide"); } else ab.classList.add("hide");
+
+    $("liveSw").classList.toggle("on",S.liveOnly!==false);
+    document.querySelectorAll("#tmSeg button").forEach(b=>b.classList.toggle("on",b.dataset.tm===S.timerMode));
+    const set=(id,v)=>{const e=$(id); if(document.activeElement!==e) e.value=v;};
+    set("every",S.every); set("lgF",S.leagueFilter); set("proxyIn",S.proxy||""); set("minScore",S.minScore);
+  }
+  $("gameSel").addEventListener("change",async e=>{
+    ref=null; S.gameId=e.target.value; save();
+    if(!S.gameId){ note="Manual entry"; S.qs=[]; save(); return render(); }
+    const m=games.find(g=>g.id===S.gameId); if(m) applyGame(m);
+    note="Loading line…"; render();
+    if(!S.lines[S.gameId]) await loadOdds(S.gameId); else note=`Line ${f1(S.lines[S.gameId])} (saved)`;
+    save(); render();
+  });
+  document.addEventListener("click",async ev=>{
+    const t=ev.target.closest("button"); if(!t) return;
+    if(t.dataset.p) ref=null;
+    if(t.id==="refresh"){ await loadGames(); const g=S.gameId; if(g&&!S.lines[g]){ await loadOdds(g); save(); render(); } }
+    if(t.id==="liveSw"){ S.liveOnly=!(S.liveOnly!==false); save(); render(); loadGames(); }
+    if(t.id==="autoSw"){ S.auto=!S.auto; save(); render(); schedule(); }
+    if(t.dataset.tm){ S.timerMode=t.dataset.tm; save(); render(); }
+    if(t.id==="keySave"){ const v=$("keyIn").value.trim(); if(!v) return msg("Paste your API key first."); try{ localStorage.setItem(KEYNAME,v); }catch(e){} hasKey=true; $("keyIn").value=""; msg("Key saved in this browser."); }
+    if(t.id==="keyTest"){ msg("Testing…"); const r=await api("/status"); trackQuota(r); const e=apiErr(r);
+      if(e) return msg("Test failed: "+e);
+      const x=r.data&&r.data.response||{}, plan=x.subscription&&x.subscription.plan, rq=x.requests;
+      if(rq){ remaining=rq.limit_day!=null&&rq.current!=null?rq.limit_day-rq.current:remaining; limitDay=rq.limit_day||limitDay; }
+      msg("Connected"+(plan?" · plan "+plan:"")+(rq?` · ${rq.current}/${rq.limit_day} requests used today`:"")); render(); }
+  });
+  $("clock").addEventListener("input",()=>{ref=null;});
+  $("lgF").addEventListener("input",e=>{S.leagueFilter=e.target.value;save();});
+  let timer=null;
+  function schedule(){
+    clearTimeout(timer); if(!S.auto) return;
+    timer=setTimeout(async()=>{
+      if(remaining!=null&&+remaining<50){ S.auto=false; note="Auto-refresh paused: under 50 requests left today."; save(); render(); return; }
+      if(!document.hidden&&(hasKey||S.proxy)) await loadGames();
+      schedule();
+    },Math.max(10,S.every||20)*1000);
+  }
+  document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&S.auto&&(hasKey||S.proxy)) loadGames(); });
+  hasKey=!!getKey(); if(!hasKey) note="Add your API key in Settings for live games.";
+  document.getElementById("proxyIn").addEventListener("input",e=>{S.proxy=e.target.value.trim();save();});
+
+  if(S.autoV!==2){ S.auto=true; S.every=20; S.autoV=2; save(); }
+  buildStatic(); fillGames(); render(); schedule();
+  if(hasKey||S.proxy) loadGames();
+  if("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js").catch(()=>{});
 })();
 </script>
 </body>
