@@ -243,7 +243,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
       <button class="wide" id="clearAll">Clear all history</button>
     </div>
 
-    <div class="ft" id="ver">sportBasket v1.3.0 · tracks your picks, places no bets</div>
+    <div class="ft" id="ver">sportBasket v1.3.1 · tracks your picks, places no bets</div>
   </div>
 </div>
 
@@ -433,7 +433,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
 
   // ================= API-BASKETBALL (live data) =================
   const KEYNAME="sportbasketKey";
-  let games=[], remaining=null, limitDay=null, busy=false, note="", hasKey=false;
+  let games=[], remaining=null, limitDay=null, busy=false, note="", hasKey=false, loaded=false;
   const pad=n=>String(n).padStart(2,"0");
   const BASE="https://v1.basketball.api-sports.io";
   const getKey=()=>{try{return localStorage.getItem(KEYNAME)||""}catch(e){return ""}};
@@ -508,7 +508,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
   function fillGames(){
     const sel=$("gameSel"), cur=S.gameId;
     sel.innerHTML='<option value="">Manual entry</option>'+games.map(g=>`<option value="${g.id}">${g.label} · ${g.status==="NS"?"not started":g.status} · ${g.home}-${g.away}</option>`).join("");
-    if(cur&&!games.find(g=>g.id===cur)){ sel.insertAdjacentHTML("beforeend",`<option value="${cur}">Selected game (not live now)</option>`); }
+    if(cur&&!games.find(g=>g.id===cur)){ sel.insertAdjacentHTML("beforeend",`<option value="${cur}">${loaded?"Selected game (not live now)":"Selected game (loading…)"}</option>`); }
     sel.value=cur||"";
   }
   const isLive=sh=>/^(Q[1-4]|OT|HT|BT|H[12])$/.test(sh);
@@ -529,7 +529,8 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
     const shown=(S.liveOnly?list.filter(m=>isLive(m.status)):list).sort((x,y)=>rank(x)-rank(y)||x.label.localeCompare(y.label));
     games=shown.slice(0,80);
     const nLive=list.filter(m=>isLive(m.status)).length;
-    note=games.length?`${nLive} live · ${games.length} listed`:(S.liveOnly?`No live games right now (${list.length} games today). Turn off "Live games only" in Settings to see them all.`:"No games found for today.");
+    loaded=true; const upd=new Date().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
+    note=games.length?`${nLive} live · ${games.length} listed · updated ${upd}`:(S.liveOnly?`No live games right now (${list.length} games today). Turn off "Live games only" in Settings to see them all.`:"No games found for today.")+(games.length?"":` · updated ${upd}`);
     fillGames();
     const sel=list.find(g=>g.id===S.gameId);
     if(sel){ applyGame(sel); if(isLive(sel.status)&&sel.clock==null) note+=" · clock not provided, enter it by hand"; }
@@ -571,6 +572,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
   document.getElementById("proxyIn").addEventListener("input",e=>{S.proxy=e.target.value.trim();save();});
 
   buildStatic(); fillGames(); render(); schedule();
+  if(hasKey||S.proxy) loadGames();
   if("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js").catch(()=>{});
 })();
 </script>
