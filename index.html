@@ -76,7 +76,7 @@ button{cursor:pointer;border:0;background:none}
 .bar{height:4px;border-radius:9px;background:var(--line);margin-top:11px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--mu);transition:width .3s}
 .go{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
-.go button{height:64px;border-radius:14px;font-weight:800;letter-spacing:.26em;font-size:20px;border:1px solid}
+.go button{height:68px;border-radius:14px;font-weight:900;letter-spacing:.16em;font-size:26px;border:1px solid;-webkit-text-stroke:.8px currentColor;text-shadow:0 0 18px color-mix(in srgb,currentColor 35%,transparent)}
 .bo{color:var(--green);border-color:color-mix(in srgb,var(--green) 60%,transparent);background:color-mix(in srgb,var(--green) 10%,transparent)}
 .bu{color:var(--red);border-color:color-mix(in srgb,var(--red) 60%,transparent);background:color-mix(in srgb,var(--red) 10%,transparent)}
 .bo.on{background:var(--green);color:#04140b}.bu.on{background:var(--red);color:#1a0509}
@@ -216,8 +216,8 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
       <div class="setrow" style="flex-wrap:wrap"><div style="width:100%"><div class="t">Proxy URL (optional)</div><div class="h" style="max-width:none">Only if the browser blocks direct calls. The proxy holds your key, so leave the key above empty.</div></div><input class="kin" id="proxyIn" type="url" placeholder="https://your-worker.workers.dev" autocomplete="off"></div>
       <div class="setrow"><div><div class="t">League filter</div><div class="h">Only list live games whose league name contains this text. Blank shows all.</div></div><input class="kin" id="lgF" style="max-width:120px" placeholder="e.g. NBA"></div>
       <div class="setrow"><div><div class="t">Live games only</div><div class="h">Off lists every game today, including upcoming and finished ones.</div></div><button class="sw" id="liveSw"></button></div>
-      <div class="setrow"><div><div class="t">Auto-refresh</div><div class="h">Each refresh uses 1 request. Free plans allow about 100 a day.</div></div><button class="sw" id="autoSw"></button></div>
-      <div class="setrow"><div><div class="t">Refresh every (sec)</div></div><div class="step"><button class="sb" data-s="every" data-d="-30">−</button><input class="sv" id="every" style="width:52px"><button class="sb" data-s="every" data-d="30">+</button></div></div>
+      <div class="setrow"><div><div class="t">Auto-refresh</div><div class="h">Refreshes scores and the clock by itself. Each refresh uses 1 request. Pauses when under 50 are left today.</div></div><button class="sw" id="autoSw"></button></div>
+      <div class="setrow"><div><div class="t">Refresh every (sec)</div><div class="h">Minimum 10. The clock itself ticks every second between refreshes.</div></div><div class="step"><button class="sb" data-s="every" data-d="-5">−</button><input class="sv" id="every" style="width:52px"><button class="sb" data-s="every" data-d="5">+</button></div></div>
       <div class="setrow"><div><div class="t">API clock means</div><div class="h">If the clock looks backwards, flip this.</div></div><div class="seg" id="tmSeg"><button data-tm="elapsed">Elapsed</button><button data-tm="remaining">Left</button></div></div>
       <h2 style="margin:18px 0 0">GAME RULES</h2>
       <div class="setrow"><div><div class="t">Game format</div><div class="h">NBA 4×12 · FIBA 4×10 · NCAAM 2×20. Overtime is 5 min.</div></div><div class="seg" id="fmtSeg"></div></div>
@@ -243,7 +243,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
       <button class="wide" id="clearAll">Clear all history</button>
     </div>
 
-    <div class="ft" id="ver">sportBasket v1.3.1 · tracks your picks, places no bets</div>
+    <div class="ft" id="ver">sportBasket v1.4.0 · tracks your picks, places no bets</div>
   </div>
 </div>
 
@@ -253,7 +253,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
     NBA:{periods:4,len:12,lab:"Q"}, FIBA:{periods:4,len:10,lab:"Q"}, NCAAM:{periods:2,len:20,lab:"H"}
   };
   const OT = 5;
-  const D = {line:224.5,home:0,away:0,period:1,clock:"12:00",thr:4,format:"NBA",minSample:6,regress:60,limit:5,guard:true,theme:"dark",min:false,tab:"totals",pick:null,history:[],qs:[],gameId:"",lines:{},leagueFilter:"",auto:false,every:60,timerMode:"elapsed",proxy:"",liveOnly:true};
+  const D = {line:224.5,home:0,away:0,period:1,clock:"12:00",thr:4,format:"NBA",minSample:6,regress:60,limit:5,guard:true,theme:"dark",min:false,tab:"totals",pick:null,history:[],qs:[],gameId:"",lines:{},leagueFilter:"",auto:true,every:20,timerMode:"elapsed",proxy:"",liveOnly:true};
   let S = JSON.parse(JSON.stringify(D)), view = "totals";
   try { const x = JSON.parse(localStorage.getItem("sportbasket")); if (x) S = Object.assign({}, D, x); } catch(e){}
   const save = () => { try { localStorage.setItem("sportbasket", JSON.stringify(S)); } catch(e){} };
@@ -459,14 +459,19 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
     if(/ncaa|college/.test(n)) return women?"FIBA":"NCAAM";  // men: 2 x 20, women: 4 x 10
     return "FIBA";                                            // WNBA and most leagues worldwide: 4 x 10
   }
-  function gameClock(g,fmtKey,mode,period){
+  const fmtClock=rem=>{ const sec=Math.max(0,Math.round(rem*60)); return Math.floor(sec/60)+":"+pad(sec%60); };
+  // minutes left in the current period, from what the API reports (null if it reports no clock)
+  function gameClockMin(g,fmtKey,mode,period){
     const f=FORMATS[fmtKey], sh=String((g.status&&g.status.short)||"").toUpperCase(), per=period>f.periods?OT:f.len;
-    if(sh==="HT") return "0:00";
-    if(sh==="NS") return per+":00";
+    if(sh==="HT") return {min:0,exact:true};
+    if(sh==="NS") return {min:per,exact:true};
     const raw=g.status&&g.status.timer; if(raw==null||raw==="") return null;
-    const t=parseFloat(String(raw).replace(",",".")); if(isNaN(t)) return null;
+    const sraw=String(raw).trim(); let t, exact=false;
+    if(sraw.includes(":")){ const [mm,ss]=sraw.split(":"); t=parseFloat(mm)+(parseFloat(ss)||0)/60; exact=true; }
+    else t=parseFloat(sraw.replace(",","."));
+    if(isNaN(t)) return null;
     let rem=mode==="elapsed"?per-t:t; rem=Math.max(0,Math.min(per,rem));
-    return Math.floor(rem)+":"+pad(Math.round((rem%1)*60)%60);
+    return {min:rem,exact};
   }
   function mapGame(g,mode){
     const sh=String((g.status&&g.status.short)||"").toUpperCase();
@@ -474,8 +479,10 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
     const p=sh==="NS"?1:periodFromStatus(sh);
     const sc=g.scores||{}, h=sc.home&&sc.home.total, a=sc.away&&sc.away.total;
     const qs=[]; for(let i=1;i<=4;i++){ const hq=sc.home&&sc.home["quarter_"+i], aq=sc.away&&sc.away["quarter_"+i]; qs.push(hq!=null&&aq!=null?+hq+ +aq:null); }
-    return {id:String(g.id),fmt:fmtKey,period:p,clock:p?gameClock(g,fmtKey,mode,p):null,home:h==null?0:+h,away:a==null?0:+a,qs,
+    const out={id:String(g.id),fmt:fmtKey,period:p,clock:null,clockMin:null,exact:false,running:/^(Q[1-4]|OT|H[12])$/.test(sh),timerRaw:(g.status&&g.status.timer)==null?"":String(g.status.timer),home:h==null?0:+h,away:a==null?0:+a,qs,
       label:`${(g.teams&&g.teams.home&&g.teams.home.name)||"Home"} vs ${(g.teams&&g.teams.away&&g.teams.away.name)||"Away"}`,status:sh,league:(g.league&&g.league.name)||""};
+    if(p){ const gc=gameClockMin(g,fmtKey,mode,p); if(gc){ out.clockMin=gc.min; out.exact=gc.exact; out.clock=fmtClock(gc.min); } }
+    return out;
   }
   function parseOdds(resp){
     const out=[]; const items=(resp&&resp.response)||[];
@@ -490,12 +497,29 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
   }
   const median=a=>{const s=a.slice().sort((x,y)=>x-y),n=s.length;return n?(n%2?s[(n-1)/2]:(s[n/2-1]+s[n/2])/2):null;};
 
+  let ref=null; // local countdown reference: {key,t,rem,exact}
   function applyGame(m){
     S.format=m.fmt; buildStatic();
     S.home=m.home; S.away=m.away; S.qs=m.qs||[];
-    if(m.period){ S.period=Math.min(m.period,FORMATS[S.format].periods+1); if(m.clock!=null) S.clock=m.clock; }
+    if(m.period){
+      S.period=Math.min(m.period,FORMATS[S.format].periods+1);
+      if(m.running&&m.clockMin!=null){
+        const key=m.id+"|"+m.period+"|"+m.timerRaw;
+        if(!ref||ref.key!==key){ ref={key,t:Date.now(),rem:m.clockMin,exact:m.exact}; if(m.clock!=null) S.clock=m.clock; }
+        // same API value as last time: keep the locally counting clock, do not jump back
+      } else { ref=null; if(m.clock!=null) S.clock=m.clock; }
+    }
     if(S.lines[m.id]) S.line=S.lines[m.id];
   }
+  // counts the clock down every second between data refreshes (the real clock stops on dead balls, so refreshes re-sync it)
+  function tick(){
+    if(!ref||!S.gameId) return;
+    let rem=ref.rem-(Date.now()-ref.t)/60000;
+    rem=Math.max(ref.exact?0:Math.max(0,ref.rem-1),rem);
+    const txt=fmtClock(rem);
+    if(txt!==S.clock){ S.clock=txt; const e=$("clock"); if(document.activeElement!==e) e.value=txt; render(true); }
+  }
+  setInterval(tick,1000);
   async function loadOdds(id){
     const r=await api("/odds?game="+encodeURIComponent(id)); trackQuota(r);
     const e=apiErr(r); if(e){ note="Odds: "+e; return false; }
@@ -545,7 +569,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
     set("every",S.every); set("lgF",S.leagueFilter); set("proxyIn",S.proxy||"");
   }
   $("gameSel").addEventListener("change",async e=>{
-    S.gameId=e.target.value; save();
+    ref=null; S.gameId=e.target.value; save();
     if(!S.gameId){ note="Manual entry"; S.qs=[]; save(); return render(); }
     const m=games.find(g=>g.id===S.gameId); if(m) applyGame(m);
     note="Loading line…"; render();
@@ -554,6 +578,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
   });
   document.addEventListener("click",async ev=>{
     const t=ev.target.closest("button"); if(!t) return;
+    if(t.dataset.p) ref=null;
     if(t.id==="refresh"){ await loadGames(); const g=S.gameId; if(g&&!S.lines[g]){ await loadOdds(g); save(); render(); } }
     if(t.id==="liveSw"){ S.liveOnly=!(S.liveOnly!==false); save(); render(); loadGames(); }
     if(t.id==="autoSw"){ S.auto=!S.auto; save(); render(); schedule(); }
@@ -565,12 +590,22 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
       if(rq){ remaining=rq.limit_day!=null&&rq.current!=null?rq.limit_day-rq.current:remaining; limitDay=rq.limit_day||limitDay; }
       msg("Connected"+(plan?" · plan "+plan:"")+(rq?` · ${rq.current}/${rq.limit_day} requests used today`:"")); render(); }
   });
+  $("clock").addEventListener("input",()=>{ref=null;});
   $("lgF").addEventListener("input",e=>{S.leagueFilter=e.target.value;save();});
   let timer=null;
-  function schedule(){ clearTimeout(timer); if(!S.auto) return; timer=setTimeout(async()=>{ if(!document.hidden&&hasKey) await loadGames(); schedule(); },Math.max(30,S.every||60)*1000); }
+  function schedule(){
+    clearTimeout(timer); if(!S.auto) return;
+    timer=setTimeout(async()=>{
+      if(remaining!=null&&+remaining<50){ S.auto=false; note="Auto-refresh paused: under 50 requests left today."; save(); render(); return; }
+      if(!document.hidden&&(hasKey||S.proxy)) await loadGames();
+      schedule();
+    },Math.max(10,S.every||20)*1000);
+  }
+  document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&S.auto&&(hasKey||S.proxy)) loadGames(); });
   hasKey=!!getKey(); if(!hasKey) note="Add your API key in Settings for live games.";
   document.getElementById("proxyIn").addEventListener("input",e=>{S.proxy=e.target.value.trim();save();});
 
+  if(S.autoV!==2){ S.auto=true; S.every=20; S.autoV=2; save(); }
   buildStatic(); fillGames(); render(); schedule();
   if(hasKey||S.proxy) loadGames();
   if("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js").catch(()=>{});
