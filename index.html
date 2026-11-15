@@ -194,11 +194,6 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
         <div class="cell"><div class="lbl">Qtr average</div><div class="v" id="qavg">—</div></div>
         <div class="cell"><div class="lbl">Method</div><div class="v" id="meth">—</div></div>
       </div>
-      <div class="today">
-        <span class="lbl">TODAY</span><span class="tag" id="tTag">0/5</span><span class="v" id="tNet" style="font-weight:700">+0.0u</span>
-        <div class="track"><i id="tFill" style="width:0"></i><b id="tKnob" style="left:0"></b></div>
-        <span class="mu" id="tLeft">5 picks left</span>
-      </div>
       <div class="status"><span class="dot" id="sdot"></span><span id="sTxt">—</span><span class="mu" id="sSub"></span></div>
       <div class="box" id="sbox"></div>
       <div class="box" id="qstrip" style="margin-top:10px"></div>
@@ -207,10 +202,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
         <div class="r"><span class="lbl">CLOCK</span><span id="swTxt"></span><span class="e" id="swE"></span></div>
         <div class="bar"><i id="swBar" style="width:0"></i></div>
       </div>
-      <div class="go"><button class="bo" id="bOver">OVER</button><button class="bu" id="bUnder">UNDER</button></div>
-      <div class="box" id="pbox"></div>
       <div class="row"><span class="lbl">FORMAT</span><select id="fmtSel"></select></div>
-      <div class="row"><span class="lbl">LOG BY<br>HAND</span><div class="logbtns"><button class="lb w" data-r="WIN">WIN</button><button class="lb l" data-r="LOSS">LOSS</button><button class="lb d" data-r="PUSH">PUSH</button></div></div>
       <div class="box" id="msg" style="margin-top:10px;display:none"></div>
       <button class="wide" id="end">End session</button>
       <div class="two"><button class="wide" id="goLog">Session Log</button><button class="wide" id="goDash">Dashboard</button></div>
@@ -237,7 +229,6 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
       <div class="setrow"><div><div class="t">Game format</div><div class="h">NBA 4×12 · FIBA 4×10 · NCAAM 2×20. Overtime is 5 min.</div></div><div class="seg" id="fmtSeg"></div></div>
       <div class="setrow"><div><div class="t">Min. sample (min)</div><div class="h">No OVER/UNDER signal until this much game time has been played.</div></div><div class="step"><button class="sb" data-s="minSample" data-d="-1">−</button><input class="sv" id="minSample" style="width:44px"><button class="sb" data-s="minSample" data-d="1">+</button></div></div>
       <div class="setrow"><div><div class="t">Live-pace weight</div><div class="h">Higher trusts live pace sooner; lower leans on the book line longer. 50 is balanced.</div></div><div class="step"><button class="sb" data-s="regress" data-d="-10">−</button><input class="sv" id="regress" style="width:44px"><button class="sb" data-s="regress" data-d="10">+</button></div></div>
-      <div class="setrow"><div><div class="t">Daily pick limit</div><div class="h">Locks new picks once you reach it. Discipline over volume.</div></div><div class="step"><button class="sb" data-s="limit" data-d="-1">−</button><input class="sv" id="limit" style="width:44px"><button class="sb" data-s="limit" data-d="1">+</button></div></div>
       <div class="setrow"><div><div class="t">Late-game guard</div><div class="h">Warns in the last 2 minutes, when fouling and garbage time distort pace.</div></div><button class="sw" id="guard"></button></div>
     </div>
 
@@ -262,10 +253,10 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
       <h2>DASHBOARD</h2>
       <div class="grid" id="dGrid"></div>
       <div class="sbars" id="dBars"></div>
-      <button class="wide" id="clearAll">Clear all history</button>
+      <button class="wide" id="clearAll">Clear alert history</button>
     </div>
 
-    <div class="ft" id="ver">sportBasket v1.5.0 · tracks your picks, places no bets</div>
+    <div class="ft" id="ver">sportBasket v1.6.0 · tracks your picks, places no bets</div>
   </div>
 </div>
 
@@ -354,7 +345,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
     document.querySelectorAll("#periods .chip").forEach(b=>b.classList.toggle("on",+b.dataset.p===S.period));
     document.querySelectorAll("#fmtSeg button").forEach(b=>b.classList.toggle("on",b.dataset.f===S.format));
     $("guard").classList.toggle("on",S.guard);
-    if(!skip){ const set=(id,v)=>{const e=$(id); if(document.activeElement!==e) e.value=v;}; set("thr",S.thr);set("home",S.home);set("away",S.away);set("clock",S.clock);set("line",S.line);set("minSample",S.minSample);set("regress",S.regress);set("limit",S.limit); }
+    if(!skip){ const set=(id,v)=>{const e=$(id); if(document.activeElement!==e) e.value=v;}; set("thr",S.thr);set("home",S.home);set("away",S.away);set("clock",S.clock);set("line",S.line);set("minSample",S.minSample);set("regress",S.regress); }
 
     const c=calc(S), f=FORMATS[S.format];
     $("proj").textContent=c.line?f1(c.proj):"—";
@@ -367,14 +358,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
     $("qavg").textContent=c.qm?f1(c.qm.avg):"—"; $("meth").textContent=c.qm?"Quarters":"Pace";
     $("game").textContent=`${f1(c.el)} / ${c.tot}`;
 
-    const t=todays(), net=t.reduce((a,h)=>a+(h.result?units(h):0),0), left=Math.max(0,S.limit-t.length);
-    $("tTag").textContent=`${t.length}/${S.limit}`;
-    const tn=$("tNet"); tn.textContent=(net>=0?"+":"−")+Math.abs(net).toFixed(1)+"u"; tn.className="v "+(net>0?"pos":net<0?"neg":"");
-    const pct=Math.min(100,(t.length/Math.max(1,S.limit))*100);
-    $("tFill").style.width=pct+"%"; $("tKnob").style.left=Math.max(1,Math.min(99,pct))+"%";
-    $("tLeft").textContent=left?`${left} pick${left>1?"s":""} left`:"limit reached";
-
-    const dotc=c.sig==="OVER"?"o":c.sig==="UNDER"?"u":"";
+        const dotc=c.sig==="OVER"?"o":c.sig==="UNDER"?"u":"";
     $("sdot").className="dot "+(c.sig==="OVER"?"":c.sig==="UNDER"?"u":"o");
     $("sTxt").textContent=c.sig==="OVER"||c.sig==="UNDER"?c.sig+" signal":c.sig.startsWith("LEAN")?"Lean "+c.sig.slice(5).toLowerCase():c.sig==="NO EDGE"?"No edge":c.sig==="FINAL"?"Final":"Waiting";
     $("sSub").textContent=`· line ${f1(c.line)}`;
@@ -392,26 +376,27 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
     $("swTxt").textContent=`Game clock · ${f1(c.el)} / ${c.tot}`; $("swE").textContent=S.format;
     $("swBar").style.width=Math.min(100,c.el/c.tot*100)+"%";
 
-    $("bOver").classList.toggle("on",!!S.pick&&S.pick.side==="OVER");
-    $("bUnder").classList.toggle("on",!!S.pick&&S.pick.side==="UNDER");
-    $("pbox").innerHTML=S.pick?`Pick open: <b>${S.pick.side} ${f1(S.pick.line)}</b>. Tap WIN, LOSS or PUSH when the game ends.`:`Press <b>OVER</b> or <b>UNDER</b> to log a pick at <b>${f1(c.line)}</b>. Nothing is bet for you.`;
     renderApi();
     $("pillTxt").textContent=S.min&&(c.sig==="OVER"||c.sig==="UNDER")?`${c.sig} ${sg(c.edge)}`:"SPORTBASKET";
   }
 
   function renderLog(){
-    const t=todays().slice().reverse();
-    $("logList").innerHTML=t.length?t.map(h=>`<div class="li"><span class="s ${h.side}">${h.side}</span><div>${f1(h.line)} line<small>${h.time} · ${h.fmt}${h.score!=null?` · ${h.score} pts at pick`:""}</small></div><span class="r ${h.result==="WIN"?"pos":h.result==="LOSS"?"neg":"mu"}">${h.result||"OPEN"}</span></div>`).join(""):`<div class="empty">No picks yet today.</div>`;
+    const t0=new Date(); t0.setHours(0,0,0,0);
+    const t=S.alerts.filter(a=>a.ts>=t0.getTime());
+    $("logList").innerHTML=t.length?t.map(a=>`<div class="li"><span class="s ${a.side}">${a.side}</span><div>${esc(a.label)}<small>${f1(a.line)} line · proj ${f1(a.proj)} · ${a.per} ${esc(a.clock)} · quality ${a.q}${a.final!=null?` · final ${a.final}`:""} · ${new Date(a.ts).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})}</small></div><span class="r ${a.status==="WIN"?"pos":a.status==="LOSS"?"neg":"mu"}">${a.status==="open"?"OPEN":a.status}</span></div>`).join(""):`<div class="empty">No alerts yet today.</div>`;
   }
   function renderDash(){
-    const all=S.history.filter(h=>h.result), w=all.filter(h=>h.result==="WIN").length, l=all.filter(h=>h.result==="LOSS").length, p=all.length-w-l, net=w-l;
+    const all=S.alerts.filter(a=>a.status==="WIN"||a.status==="LOSS"||a.status==="PUSH");
+    const w=all.filter(a=>a.status==="WIN").length, l=all.filter(a=>a.status==="LOSS").length, p=all.length-w-l, net=w-l;
     const cell=(a,b,cl)=>`<div class="cell"><div class="lbl">${a}</div><div class="v ${cl||""}">${b}</div></div>`;
-    $("dGrid").innerHTML=cell("Picks",all.length)+cell("Hit rate",w+l?Math.round(w/(w+l)*100)+"%":"—")+cell("Record",`${w}-${l}-${p}`)+cell("Net units",(net>=0?"+":"−")+Math.abs(net)+"u",net>0?"pos":net<0?"neg":"");
-    const side=s=>{const x=all.filter(h=>h.side===s&&h.result!=="PUSH"),ww=x.filter(h=>h.result==="WIN").length;return {n:x.length,r:x.length?ww/x.length*100:0}};
+    $("dGrid").innerHTML=cell("Alerts settled",all.length)+cell("Hit rate",w+l?Math.round(w/(w+l)*100)+"%":"—")+cell("Record",`${w}-${l}-${p}`)+cell("Net units",(net>=0?"+":"−")+Math.abs(net)+"u",net>0?"pos":net<0?"neg":"");
+    const side=s=>{const x=all.filter(a=>a.side===s&&a.status!=="PUSH"),ww=x.filter(a=>a.status==="WIN").length;return {n:x.length,r:x.length?ww/x.length*100:0}};
     const o=side("OVER"),u=side("UNDER");
-    $("dBars").innerHTML=`<div class="lbl" style="font-size:11px">Hit rate by side</div><div class="br"><span>OVER</span><div class="tr"><i style="width:${o.r}%"></i></div><span style="width:auto;color:var(--tx)">${o.n?Math.round(o.r)+"%":"—"}</span></div><div class="br"><span>UNDER</span><div class="tr"><i style="width:${u.r}%;background:var(--red)"></i></div><span style="width:auto;color:var(--tx)">${u.n?Math.round(u.r)+"%":"—"}</span></div>`;
+    const tier=(lo,hi)=>{const x=all.filter(a=>a.q>=lo&&a.q<=hi&&a.status!=="PUSH"),ww=x.filter(a=>a.status==="WIN").length;return {n:x.length,r:x.length?ww/x.length*100:0}};
+    const hi=tier(80,100), mid=tier(60,79), lo=tier(0,59);
+    const bar=(name,v,col)=>`<div class="br"><span>${name}</span><div class="tr"><i style="width:${v.r}%;${col?"background:"+col:""}"></i></div><span style="width:auto;color:var(--tx)">${v.n?Math.round(v.r)+"% ("+v.n+")":"—"}</span></div>`;
+    $("dBars").innerHTML=`<div class="lbl" style="font-size:11px">Hit rate by side</div>${bar("OVER",o)}${bar("UNDER",u,"var(--red)")}<div class="lbl" style="font-size:11px;margin-top:16px">Hit rate by signal quality</div>${bar("80-100",hi)}${bar("60-79",mid)}${bar("under 60",lo)}`;
   }
-
   const msg = (t) => { const m=$("msg"); m.textContent=t; m.style.display="block"; const g=$("toast"); g.textContent=t; g.style.display="block"; clearTimeout(msg.t); msg.t=setTimeout(()=>{m.style.display="none";g.style.display="none";},6000); };
   const go = v => { view=v; if(v==="log")renderLog(); if(v==="dash")renderDash(); if(v==="alerts"){S.unseen=0;save();renderAlerts();} render(); window.scrollTo(0,0); };
   const upd = fn => { fn(); save(); render(); };
@@ -429,26 +414,16 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
     if(t.dataset.p) return upd(()=>{S.period=+t.dataset.p; const f=FORMATS[S.format]; S.clock=(S.period>f.periods?OT:f.len)+":00";});
     if(t.dataset.f) return setFormat(t.dataset.f);
     if(t.dataset.s) return upd(()=>{const k=t.dataset.s; S[k]=Math.max(0,Math.round((num(S[k],0)+ +t.dataset.d)*10)/10);});
-    if(t.id==="bOver"||t.id==="bUnder"){
-      const side=t.id==="bOver"?"OVER":"UNDER";
-      if(S.pick&&S.pick.side===side) return upd(()=>S.pick=null);
-      if(!S.pick && todays().length>=S.limit){ return msg(`Daily limit of ${S.limit} picks reached.`); }
-      return upd(()=>{ const c=calc(S); S.pick={side,line:S.line,score:c.score,fmt:S.format,time:new Date().toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}; });
-    }
-    if(t.dataset.r){
-      if(!S.pick) return msg("Press OVER or UNDER first, then log the result.");
-      return upd(()=>{ S.history.push(Object.assign({}, S.pick, {result:t.dataset.r, day:todayKey()})); S.pick=null; });
-    }
     if(t.id==="end") return upd(()=>{S.home=0;S.away=0;S.qs=[];S.period=1;S.clock=FORMATS[S.format].len+":00";S.pick=null; msg("Session ended. Scores reset; your log is kept.");});
     if(t.id==="goLog") return go("log");
     if(t.id==="goDash") return go("dash");
-    if(t.id==="clearAll") return upd(()=>{S.history=[]; renderDash();});
+    if(t.id==="clearAll") return upd(()=>{S.alerts=[]; S.alerted={}; S.unseen=0; renderDash();});
   });
   function setFormat(k){ upd(()=>{S.format=k; S.period=1; S.clock=FORMATS[k].len+":00"; buildStatic();}); }
   $("fmtSel").addEventListener("change",e=>setFormat(e.target.value));
 
   const bind=(id,key,int)=>$(id).addEventListener("input",e=>{S[key]=int?Math.round(num(e.target.value,0)):num(e.target.value,0);save();render(true);});
-  [["thr","thr"],["line","line"],["home","home",1],["away","away",1],["minSample","minSample",1],["regress","regress",1],["limit","limit",1]].forEach(a=>bind(...a));
+  [["thr","thr"],["line","line"],["home","home",1],["away","away",1],["minSample","minSample",1],["regress","regress",1]].forEach(a=>bind(...a));
   $("clock").addEventListener("input",e=>{S.clock=e.target.value;save();render(true);});
   document.querySelectorAll("input").forEach(i=>i.addEventListener("focus",()=>i.select()));
 
