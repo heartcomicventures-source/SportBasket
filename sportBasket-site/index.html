@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0d12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="sportBasket">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>sportBasket · over/under threshold</title>
+<style>
+:root{--bg:#0b0d12;--panel:#0f1218;--line:#232730;--card:#12151c;--tx:#f2f4f8;--mu:#8a91a1;--dim:#5b6272;--amber:#f5b942;--green:#4ade80;--red:#f0566a;--chip:#1b1f28}
+body.light{--bg:#eef0f4;--panel:#ffffff;--line:#dfe2e9;--card:#f6f7fa;--tx:#12151f;--mu:#5d6578;--dim:#9aa1b1;--amber:#d98e00;--green:#12935a;--red:#d8344b;--chip:#eceef3}
+*{box-sizing:border-box;margin:0;font-family:Inter,ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif}
+html,body{min-height:100%}
+body{background:var(--bg);color:var(--tx);display:flex;justify-content:center;padding:24px 12px;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit;outline:0}
+button{cursor:pointer;border:0;background:none}
+.panel{width:100%;max-width:440px;background:var(--panel);border:1px solid var(--line);border-radius:22px;overflow:hidden;align-self:flex-start;box-shadow:0 20px 60px -20px rgba(0,0,0,.7)}
+.hd{display:flex;align-items:center;gap:12px;padding:16px 16px 14px}
+.logo{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--card);display:grid;place-items:center;color:var(--amber)}
+.logo svg{width:18px;height:18px}
+.nm{font-weight:700;letter-spacing:.18em;font-size:15px;color:var(--tx)}
+.badge{padding:4px 11px;border-radius:8px;border:1px solid var(--red);color:var(--red);background:color-mix(in srgb,var(--red) 10%,transparent);font-weight:700;font-size:12px;letter-spacing:.06em}
+.badge.live{border-color:var(--green);color:var(--green);background:color-mix(in srgb,var(--green) 10%,transparent)}
+.sp{flex:1}
+.ib{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--card);display:grid;place-items:center;color:var(--mu)}
+.ib:hover{color:var(--tx)}
+.ib svg{width:15px;height:15px}
+.tabs{display:flex;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.tab{flex:1;padding:14px 0;color:var(--mu);font-weight:600;font-size:15px;display:flex;justify-content:center;align-items:center;gap:8px;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.on{color:var(--amber);border-bottom-color:var(--amber)}
+.tab svg{width:16px;height:16px}
+.body{padding:18px 16px 8px}
+.hero{text-align:center}
+.lbl{font-size:12px;letter-spacing:.2em;color:var(--mu);font-weight:600;text-transform:uppercase}
+.big{font-size:66px;font-weight:800;letter-spacing:-.02em;line-height:1.05;margin-top:6px;font-variant-numeric:tabular-nums}
+.chips{display:flex;gap:10px;margin-top:12px}
+.chip{width:52px;height:38px;border-radius:9px;background:var(--chip);color:var(--dim);font-weight:700;font-size:15px;border:1px solid transparent}
+.chip.on{background:color-mix(in srgb,var(--amber) 14%,var(--chip));color:var(--tx);border-color:var(--amber)}
+.cap{color:var(--mu);font-size:14px;margin-top:12px;text-align:center}
+.need{display:flex;align-items:center;justify-content:center;gap:14px;margin:18px 0 14px}
+.step{display:flex;align-items:center;gap:12px}
+.sb{width:40px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--card);font-size:22px;color:var(--mu);line-height:1}
+.sb:hover{color:var(--tx)}
+.sv{width:56px;text-align:center;font-size:24px;font-weight:800;background:none;border:0;font-variant-numeric:tabular-nums}
+.grid{border:1px solid var(--line);border-radius:14px;display:grid;grid-template-columns:1fr 1fr;overflow:hidden}
+.cell{padding:13px 16px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.cell:nth-child(2n){border-right:0}.cell:nth-last-child(-n+2){border-bottom:0}
+.cell .lbl{font-size:11px}
+.cell .v{font-size:20px;font-weight:700;margin-top:5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cell input{background:none;border:0;width:100%;font-size:20px;font-weight:700;margin-top:5px;font-variant-numeric:tabular-nums}
+.pos{color:var(--green)}.neg{color:var(--red)}
+.today{display:flex;align-items:center;gap:10px;margin:16px 0 10px;font-size:13px}
+.today .lbl{font-size:12px;letter-spacing:.14em;color:var(--mu);font-weight:700}
+.tag{border:1px solid var(--line);background:var(--card);border-radius:7px;padding:2px 9px;font-weight:700;font-size:13px}
+.track{flex:1;height:4px;border-radius:9px;background:var(--line);position:relative}
+.track i{position:absolute;left:0;top:0;bottom:0;border-radius:9px;background:var(--amber)}
+.track b{position:absolute;top:50%;width:8px;height:20px;border-radius:3px;background:var(--tx);transform:translate(-50%,-50%)}
+.mu{color:var(--mu)}
+.status{display:flex;align-items:center;gap:9px;margin:14px 0 10px;font-size:17px;font-weight:600}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+.dot.o{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+.dot.u{background:var(--red);box-shadow:0 0 8px var(--red)}
+.status span.mu{font-weight:500}
+.box{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:12px 14px;font-size:14px;color:var(--mu);line-height:1.45}
+.box b{color:var(--tx)}.box .am{color:var(--amber);font-weight:700}
+.sweep{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:13px 14px;margin-top:12px}
+.sweep .r{display:flex;gap:12px;align-items:baseline;font-size:14px}
+.sweep .r .lbl{font-size:11px;color:var(--mu);font-weight:700;letter-spacing:.14em}
+.sweep .r .e{margin-left:auto;color:var(--mu)}
+.bar{height:4px;border-radius:9px;background:var(--line);margin-top:11px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--mu);transition:width .3s}
+.go{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
+.go button{height:64px;border-radius:14px;font-weight:800;letter-spacing:.26em;font-size:20px;border:1px solid}
+.bo{color:var(--green);border-color:color-mix(in srgb,var(--green) 60%,transparent);background:color-mix(in srgb,var(--green) 10%,transparent)}
+.bu{color:var(--red);border-color:color-mix(in srgb,var(--red) 60%,transparent);background:color-mix(in srgb,var(--red) 10%,transparent)}
+.bo.on{background:var(--green);color:#04140b}.bu.on{background:var(--red);color:#1a0509}
+.bo:hover{background:color-mix(in srgb,var(--green) 22%,transparent)}.bu:hover{background:color-mix(in srgb,var(--red) 22%,transparent)}
+.bo.on:hover{background:var(--green)}.bu.on:hover{background:var(--red)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}
+.row .lbl{font-size:12px;letter-spacing:.14em;line-height:1.35}
+select{background:var(--chip);border:1px solid var(--line);border-radius:9px;padding:7px 12px;font-weight:700;font-size:15px}
+.logbtns{display:flex;gap:8px}
+.lb{padding:7px 14px;border-radius:9px;border:1px solid var(--line);font-weight:800;font-size:13px;letter-spacing:.06em}
+.lb.w{color:var(--green);border-color:color-mix(in srgb,var(--green) 55%,transparent);background:color-mix(in srgb,var(--green) 8%,transparent)}
+.lb.l{color:var(--red);border-color:color-mix(in srgb,var(--red) 55%,transparent);background:color-mix(in srgb,var(--red) 8%,transparent)}
+.lb.d{background:var(--card)}
+.wide{width:100%;height:50px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-weight:600;font-size:16px;color:var(--tx);margin-top:12px}
+.wide:hover{background:var(--chip)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.two .wide{margin-top:0}
+.ft{text-align:center;color:var(--dim);font-size:13px;padding:16px 0 18px;border-top:1px solid var(--line);margin-top:16px}
+.sc{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
+.sc .cell{border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.sc input{font-size:22px}
+.hide{display:none!important}
+.setrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}
+.setrow:last-child{border:0}
+.setrow .t{font-weight:600;font-size:15px}.setrow .h{color:var(--mu);font-size:12.5px;margin-top:3px;max-width:230px;line-height:1.4}
+.seg{display:flex;gap:6px}.seg button{padding:7px 12px;border-radius:9px;background:var(--chip);color:var(--mu);font-weight:700;font-size:13px;border:1px solid transparent}.seg button.on{color:var(--tx);border-color:var(--amber);background:color-mix(in srgb,var(--amber) 14%,var(--chip))}
+.sw{width:46px;height:26px;border-radius:99px;background:var(--chip);border:1px solid var(--line);position:relative}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--mu);transition:.15s}
+.sw.on{background:var(--amber);border-color:var(--amber)}.sw.on::after{left:23px;background:#fff}
+.back{display:flex;align-items:center;gap:8px;color:var(--mu);font-weight:600;margin-bottom:14px;font-size:14px}
+.back:hover{color:var(--tx)}
+h2{font-size:12px;letter-spacing:.2em;color:var(--mu);margin-bottom:12px;font-weight:700}
+.li{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);font-size:14px}
+.li .s{font-weight:800;font-size:12px;letter-spacing:.1em;padding:3px 8px;border-radius:7px}
+.li .s.OVER{color:var(--green);background:color-mix(in srgb,var(--green) 12%,transparent)}
+.li .s.UNDER{color:var(--red);background:color-mix(in srgb,var(--red) 12%,transparent)}
+.li small{display:block;color:var(--mu);font-size:12px;margin-top:2px}
+.li .r{font-weight:800;font-size:12px;letter-spacing:.08em}
+.empty{color:var(--mu);text-align:center;padding:28px 0;font-size:14px}
+.sbars{margin-top:14px}.sbars .br{display:flex;align-items:center;gap:10px;margin-top:9px;font-size:13px}
+.sbars .br span:first-child{width:56px;color:var(--mu);font-weight:700;letter-spacing:.08em;font-size:12px}
+.sbars .tr{flex:1;height:8px;background:var(--line);border-radius:9px;overflow:hidden}.sbars .tr i{display:block;height:100%;background:var(--green)}
+.pill{display:none;padding:12px 18px;align-items:center;gap:10px;font-weight:700;letter-spacing:.14em;cursor:pointer}
+.min .pill{display:flex}.min .full{display:none}
+.min{width:auto;max-width:none}
+
+.gsel{flex:1;min-width:0;font-size:14px}
+.note2{color:var(--mu);font-size:12.5px;margin-top:6px;line-height:1.4}
+.kin{flex:1;min-width:0;background:var(--chip);border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:16px;width:100%}
+.sm{padding:10px 14px;border-radius:9px;border:1px solid var(--line);background:var(--card);font-weight:700;font-size:14px}
+.sm:hover{background:var(--chip)}
+button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(safe-area-inset-bottom))}
+@media(max-width:480px){
+  body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+  .panel{max-width:none;border-radius:0;border-left:0;border-right:0;min-height:100vh;align-self:stretch}
+  input,select{font-size:16px}
+  .sv{font-size:22px}
+}
+</style>
+</head>
+<body>
+<div class="panel" id="panel">
+  <div class="pill" id="pill"><span class="logo" style="width:28px;height:28px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3v18M5.6 5.6c3.2 3.2 3.2 9.6 0 12.8M18.4 5.6c-3.2 3.2-3.2 9.6 0 12.8"/></svg></span><span id="pillTxt">SPORTBASKET</span></div>
+  <div class="full">
+    <div class="hd">
+      <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3v18M5.6 5.6c3.2 3.2 3.2 9.6 0 12.8M18.4 5.6c-3.2 3.2-3.2 9.6 0 12.8"/></svg></div>
+      <div class="nm">SPORTBASKET</div>
+      <button class="badge" id="badge" title="Tap to change game format">NBA</button>
+      <div class="sp"></div>
+      <button class="ib" id="theme" title="Light / dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
+      <button class="ib" id="minb" title="Minimize"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
+    </div>
+    <div class="tabs">
+      <button class="tab" data-t="totals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>Totals</button>
+      <button class="tab" data-t="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Settings</button>
+    </div>
+
+    <!-- TOTALS -->
+    <div class="body" id="v-totals">
+      <div class="hero">
+        <div class="lbl">Projected total</div>
+        <div class="big" id="proj">—</div>
+        <div class="chips" id="periods" style="justify-content:center"></div>
+        <div class="cap" id="cap"></div>
+      </div>
+      <div class="need">
+        <span class="lbl">Threshold</span>
+        <div class="step"><button class="sb" data-s="thr" data-d="-0.5">−</button><input class="sv" id="thr" inputmode="decimal"><button class="sb" data-s="thr" data-d="0.5">+</button></div>
+        <span class="lbl" style="letter-spacing:.1em;text-transform:none;font-size:14px;font-weight:500">pts of edge</span>
+      </div>
+      <div class="row" style="margin:0 0 4px"><span class="lbl">LIVE GAME</span><select id="gameSel" class="gsel"><option value="">Manual entry</option></select><button class="ib" id="refresh" title="Refresh live games"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button></div>
+      <div class="note2" id="apiNote" style="margin:0 0 14px"></div>
+      <div class="sc">
+        <div class="cell"><div class="lbl">Home</div><input id="home" inputmode="numeric"></div>
+        <div class="cell"><div class="lbl">Away</div><input id="away" inputmode="numeric"></div>
+        <div class="cell"><div class="lbl">Time left</div><input id="clock" placeholder="mm:ss"></div>
+      </div>
+      <div class="grid">
+        <div class="cell"><div class="lbl">Book line</div><input id="line" inputmode="decimal"></div>
+        <div class="cell"><div class="lbl">Score total</div><div class="v" id="tot">0</div></div>
+        <div class="cell"><div class="lbl">Edge</div><div class="v" id="edge">—</div></div>
+        <div class="cell"><div class="lbl">Need / min</div><div class="v" id="need">—</div></div>
+        <div class="cell"><div class="lbl">Live pace</div><div class="v" id="pace">—</div></div>
+        <div class="cell"><div class="lbl">Game</div><div class="v" id="game">—</div></div>
+      </div>
+      <div class="today">
+        <span class="lbl">TODAY</span><span class="tag" id="tTag">0/5</span><span class="v" id="tNet" style="font-weight:700">+0.0u</span>
+        <div class="track"><i id="tFill" style="width:0"></i><b id="tKnob" style="left:0"></b></div>
+        <span class="mu" id="tLeft">5 picks left</span>
+      </div>
+      <div class="status"><span class="dot" id="sdot"></span><span id="sTxt">—</span><span class="mu" id="sSub"></span></div>
+      <div class="box" id="sbox"></div>
+      <div class="sweep">
+        <div class="r"><span class="lbl">CLOCK</span><span id="swTxt"></span><span class="e" id="swE"></span></div>
+        <div class="bar"><i id="swBar" style="width:0"></i></div>
+      </div>
+      <div class="go"><button class="bo" id="bOver">OVER</button><button class="bu" id="bUnder">UNDER</button></div>
+      <div class="box" id="pbox"></div>
+      <div class="row"><span class="lbl">FORMAT</span><select id="fmtSel"></select></div>
+      <div class="row"><span class="lbl">LOG BY<br>HAND</span><div class="logbtns"><button class="lb w" data-r="WIN">WIN</button><button class="lb l" data-r="LOSS">LOSS</button><button class="lb d" data-r="PUSH">PUSH</button></div></div>
+      <div class="box" id="msg" style="margin-top:10px;display:none"></div>
+      <button class="wide" id="end">End session</button>
+      <div class="two"><button class="wide" id="goLog">Session Log</button><button class="wide" id="goDash">Dashboard</button></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="body hide" id="v-settings">
+      <h2 style="margin-bottom:4px">LIVE DATA · API-BASKETBALL</h2>
+      <div class="setrow" style="flex-wrap:wrap"><div style="width:100%"><div class="t">API key</div><div class="h" style="max-width:none">Stored only on this device and sent only to API-Sports. Skip it if you use a proxy.</div></div><input class="kin" id="keyIn" type="password" placeholder="Paste key" autocomplete="off"><button class="sm" id="keySave">Save</button><button class="sm" id="keyTest">Test</button></div>
+      <div class="setrow" style="flex-wrap:wrap"><div style="width:100%"><div class="t">Proxy URL (optional)</div><div class="h" style="max-width:none">Only if the browser blocks direct calls. The proxy holds your key, so leave the key above empty.</div></div><input class="kin" id="proxyIn" type="url" placeholder="https://your-worker.workers.dev" autocomplete="off"></div>
+      <div class="setrow"><div><div class="t">League filter</div><div class="h">Only list live games whose league name contains this text. Blank shows all.</div></div><input class="kin" id="lgF" style="max-width:120px" placeholder="e.g. NBA"></div>
+      <div class="setrow"><div><div class="t">Auto-refresh</div><div class="h">Each refresh uses 1 request. Free plans allow about 100 a day.</div></div><button class="sw" id="autoSw"></button></div>
+      <div class="setrow"><div><div class="t">Refresh every (sec)</div></div><div class="step"><button class="sb" data-s="every" data-d="-30">−</button><input class="sv" id="every" style="width:52px"><button class="sb" data-s="every" data-d="30">+</button></div></div>
+      <div class="setrow"><div><div class="t">API clock means</div><div class="h">If the clock looks backwards, flip this.</div></div><div class="seg" id="tmSeg"><button data-tm="elapsed">Elapsed</button><button data-tm="remaining">Left</button></div></div>
+      <h2 style="margin:18px 0 0">GAME RULES</h2>
+      <div class="setrow"><div><div class="t">Game format</div><div class="h">NBA 4×12 · FIBA 4×10 · NCAAM 2×20. Overtime is 5 min.</div></div><div class="seg" id="fmtSeg"></div></div>
+      <div class="setrow"><div><div class="t">Min. sample (min)</div><div class="h">No OVER/UNDER signal until this much game time has been played.</div></div><div class="step"><button class="sb" data-s="minSample" data-d="-1">−</button><input class="sv" id="minSample" style="width:44px"><button class="sb" data-s="minSample" data-d="1">+</button></div></div>
+      <div class="setrow"><div><div class="t">Live-pace weight</div><div class="h">Higher trusts live pace sooner; lower leans on the book line longer. 50 is balanced.</div></div><div class="step"><button class="sb" data-s="regress" data-d="-10">−</button><input class="sv" id="regress" style="width:44px"><button class="sb" data-s="regress" data-d="10">+</button></div></div>
+      <div class="setrow"><div><div class="t">Daily pick limit</div><div class="h">Locks new picks once you reach it. Discipline over volume.</div></div><div class="step"><button class="sb" data-s="limit" data-d="-1">−</button><input class="sv" id="limit" style="width:44px"><button class="sb" data-s="limit" data-d="1">+</button></div></div>
+      <div class="setrow"><div><div class="t">Late-game guard</div><div class="h">Warns in the last 2 minutes, when fouling and garbage time distort pace.</div></div><button class="sw" id="guard"></button></div>
+    </div>
+
+    <!-- LOG -->
+    <div class="body hide" id="v-log">
+      <button class="back" data-back>← Back</button>
+      <h2>SESSION LOG</h2>
+      <div id="logList"></div>
+    </div>
+
+    <!-- DASH -->
+    <div class="body hide" id="v-dash">
+      <button class="back" data-back>← Back</button>
+      <h2>DASHBOARD</h2>
+      <div class="grid" id="dGrid"></div>
+      <div class="sbars" id="dBars"></div>
+      <button class="wide" id="clearAll">Clear all history</button>
+    </div>
+
+    <div class="ft" id="ver">sportBasket v1.2.0 · tracks your picks, places no bets</div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const FORMATS = {
+    NBA:{periods:4,len:12,lab:"Q"}, FIBA:{periods:4,len:10,lab:"Q"}, NCAAM:{periods:2,len:20,lab:"H"}
+  };
+  const OT = 5;
+  const D = {line:224.5,home:0,away:0,period:1,clock:"12:00",thr:4,format:"NBA",minSample:6,regress:60,limit:5,guard:true,theme:"dark",min:false,tab:"totals",pick:null,history:[],gameId:"",lines:{},leagueFilter:"",auto:false,every:60,timerMode:"elapsed",proxy:""};
+  let S = JSON.parse(JSON.stringify(D)), view = "totals";
+  try { const x = JSON.parse(localStorage.getItem("sportbasket")); if (x) S = Object.assign({}, D, x); } catch(e){}
+  const save = () => { try { localStorage.setItem("sportbasket", JSON.stringify(S)); } catch(e){} };
+
+  const $ = id => document.getElementById(id);
+  const f1 = n => (Math.round(n*10)/10).toFixed(1);
+  const sg = n => (n>0?"+":"")+f1(n);
+  const todayKey = () => new Date().toDateString();
+  const clock = t => { t=String(t).trim(); if(!t) return null; if(t.includes(":")){const[a,b]=t.split(":");const m=parseInt(a,10),s=parseInt(b||"0",10);return isNaN(m)||isNaN(s)?null:m+s/60} const v=parseFloat(t); return isNaN(v)?null:v; };
+
+  function calc(s){
+    const f=FORMATS[s.format], reg=f.periods*f.len, ot=s.period>f.periods, otN=ot?s.period-f.periods:0, pl=ot?OT:f.len;
+    let rem=clock(s.clock); if(rem==null) rem=pl; rem=Math.max(0,Math.min(pl,rem));
+    const base=ot?reg+(otN-1)*OT:(s.period-1)*f.len, el=base+(pl-rem), tot=ot?reg+otN*OT:reg, left=Math.max(0,tot-el);
+    const score=(+s.home||0)+(+s.away||0), line=+s.line||0, pre=line/reg, live=el>0?score/el:pre;
+    const w=Math.min(.9,(el/reg)*(s.regress/50)), rate=w*live+(1-w)*pre, proj=score+left*rate, edge=proj-line;
+    const need=left>0?(line-score)/left:null, ready=el>=s.minSample;
+    let sig="WAIT"; if(left===0&&el>0) sig="FINAL"; else if(ready){ sig=edge>=s.thr?"OVER":edge<=-s.thr?"UNDER":"NO EDGE"; }
+    return {el,left,tot,score,line,live,proj,edge,need,sig,late:left>0&&left<=2,pl};
+  }
+
+  const todays = () => S.history.filter(h => h.day === todayKey());
+  const units = h => h.result==="WIN"?1:h.result==="LOSS"?-1:0;
+
+  function buildStatic(){
+    const f=FORMATS[S.format]; let h="";
+    for(let i=1;i<=f.periods;i++) h+=`<button class="chip" data-p="${i}">${f.lab}${i}</button>`;
+    h+=`<button class="chip" data-p="${f.periods+1}">OT</button>`;
+    $("periods").innerHTML=h;
+    $("fmtSel").innerHTML=Object.keys(FORMATS).map(k=>`<option>${k}</option>`).join("");
+    $("fmtSeg").innerHTML=Object.keys(FORMATS).map(k=>`<button data-f="${k}">${k}</button>`).join("");
+  }
+
+  function render(skip){
+    document.body.classList.toggle("light",S.theme==="light");
+    $("panel").classList.toggle("min",S.min);
+    ["totals","settings","log","dash"].forEach(v=>$("v-"+v).classList.toggle("hide",view!==v));
+    document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.t===(view==="settings"?"settings":"totals")));
+    $("badge").textContent=S.format; $("fmtSel").value=S.format;
+    document.querySelectorAll("#periods .chip").forEach(b=>b.classList.toggle("on",+b.dataset.p===S.period));
+    document.querySelectorAll("#fmtSeg button").forEach(b=>b.classList.toggle("on",b.dataset.f===S.format));
+    $("guard").classList.toggle("on",S.guard);
+    if(!skip){ const set=(id,v)=>{const e=$(id); if(document.activeElement!==e) e.value=v;}; set("thr",S.thr);set("home",S.home);set("away",S.away);set("clock",S.clock);set("line",S.line);set("minSample",S.minSample);set("regress",S.regress);set("limit",S.limit); }
+
+    const c=calc(S), f=FORMATS[S.format];
+    $("proj").textContent=c.line?f1(c.proj):"—";
+    const per=S.period>f.periods?"OT"+(S.period-f.periods):f.lab+S.period;
+    $("cap").textContent=c.sig==="WAIT"?`${per} · ${f1(c.el)} of ${S.minSample} min needed before a signal`:`${per} · ${f1(c.left)} min left · edge ${sg(c.edge)} vs ±${f1(S.thr)} threshold`;
+    $("tot").textContent=c.score;
+    const e=$("edge"); e.textContent=sg(c.edge); e.className="v "+(c.edge>.05?"pos":c.edge<-.05?"neg":"");
+    $("need").textContent=c.need==null?"—":f1(c.need);
+    $("pace").textContent=c.el>0?f1(c.live):"—";
+    $("game").textContent=`${f1(c.el)} / ${c.tot}`;
+
+    const t=todays(), net=t.reduce((a,h)=>a+(h.result?units(h):0),0), left=Math.max(0,S.limit-t.length);
+    $("tTag").textContent=`${t.length}/${S.limit}`;
+    const tn=$("tNet"); tn.textContent=(net>=0?"+":"−")+Math.abs(net).toFixed(1)+"u"; tn.className="v "+(net>0?"pos":net<0?"neg":"");
+    const pct=Math.min(100,(t.length/Math.max(1,S.limit))*100);
+    $("tFill").style.width=pct+"%"; $("tKnob").style.left=Math.max(1,Math.min(99,pct))+"%";
+    $("tLeft").textContent=left?`${left} pick${left>1?"s":""} left`:"limit reached";
+
+    const dotc=c.sig==="OVER"?"o":c.sig==="UNDER"?"u":"";
+    $("sdot").className="dot "+(c.sig==="OVER"?"":c.sig==="UNDER"?"u":"o");
+    $("sTxt").textContent=c.sig==="OVER"||c.sig==="UNDER"?c.sig+" signal":c.sig==="NO EDGE"?"No edge":c.sig==="FINAL"?"Final":"Waiting";
+    $("sSub").textContent=`· line ${f1(c.line)}`;
+    let sb;
+    if(c.sig==="OVER"||c.sig==="UNDER") sb=`Projected <span class="am">${f1(c.proj)}</span> is <b>${f1(Math.abs(c.edge))}</b> pts ${c.sig==="OVER"?"above":"below"} the <b>${f1(c.line)}</b> line, past your <b>${f1(S.thr)}</b> threshold.`;
+    else if(c.sig==="NO EDGE") sb=`Projection is only <b>${f1(Math.abs(c.edge))}</b> pts from the line. Needs <span class="am">${f1(S.thr)}</span> for a signal.`;
+    else if(c.sig==="FINAL") sb=`Game over at <b>${c.score}</b> vs line <b>${f1(c.line)}</b>. Log the result below.`;
+    else sb=`Enter scores and the clock. Signals start after <span class="am">${S.minSample}</span> min of game time.`;
+    if(S.guard&&c.late) sb+=` <b style="color:var(--amber)">Final 2 minutes: fouling can swing the total.</b>`;
+    $("sbox").innerHTML=sb;
+    $("swTxt").textContent=`Game clock · ${f1(c.el)} / ${c.tot}`; $("swE").textContent=S.format;
+    $("swBar").style.width=Math.min(100,c.el/c.tot*100)+"%";
+
+    $("bOver").classList.toggle("on",!!S.pick&&S.pick.side==="OVER");
+    $("bUnder").classList.toggle("on",!!S.pick&&S.pick.side==="UNDER");
+    $("pbox").innerHTML=S.pick?`Pick open: <b>${S.pick.side} ${f1(S.pick.line)}</b>. Tap WIN, LOSS or PUSH when the game ends.`:`Press <b>OVER</b> or <b>UNDER</b> to log a pick at <b>${f1(c.line)}</b>. Nothing is bet for you.`;
+    renderApi();
+    $("pillTxt").textContent=S.min&&(c.sig==="OVER"||c.sig==="UNDER")?`${c.sig} ${sg(c.edge)}`:"SPORTBASKET";
+  }
+
+  function renderLog(){
+    const t=todays().slice().reverse();
+    $("logList").innerHTML=t.length?t.map(h=>`<div class="li"><span class="s ${h.side}">${h.side}</span><div>${f1(h.line)} line<small>${h.time} · ${h.fmt}${h.score!=null?` · ${h.score} pts at pick`:""}</small></div><span class="r ${h.result==="WIN"?"pos":h.result==="LOSS"?"neg":"mu"}">${h.result||"OPEN"}</span></div>`).join(""):`<div class="empty">No picks yet today.</div>`;
+  }
+  function renderDash(){
+    const all=S.history.filter(h=>h.result), w=all.filter(h=>h.result==="WIN").length, l=all.filter(h=>h.result==="LOSS").length, p=all.length-w-l, net=w-l;
+    const cell=(a,b,cl)=>`<div class="cell"><div class="lbl">${a}</div><div class="v ${cl||""}">${b}</div></div>`;
+    $("dGrid").innerHTML=cell("Picks",all.length)+cell("Hit rate",w+l?Math.round(w/(w+l)*100)+"%":"—")+cell("Record",`${w}-${l}-${p}`)+cell("Net units",(net>=0?"+":"−")+Math.abs(net)+"u",net>0?"pos":net<0?"neg":"");
+    const side=s=>{const x=all.filter(h=>h.side===s&&h.result!=="PUSH"),ww=x.filter(h=>h.result==="WIN").length;return {n:x.length,r:x.length?ww/x.length*100:0}};
+    const o=side("OVER"),u=side("UNDER");
+    $("dBars").innerHTML=`<div class="lbl" style="font-size:11px">Hit rate by side</div><div class="br"><span>OVER</span><div class="tr"><i style="width:${o.r}%"></i></div><span style="width:auto;color:var(--tx)">${o.n?Math.round(o.r)+"%":"—"}</span></div><div class="br"><span>UNDER</span><div class="tr"><i style="width:${u.r}%;background:var(--red)"></i></div><span style="width:auto;color:var(--tx)">${u.n?Math.round(u.r)+"%":"—"}</span></div>`;
+  }
+
+  const msg = (t) => { const m=$("msg"); m.textContent=t; m.style.display="block"; clearTimeout(msg.t); msg.t=setTimeout(()=>m.style.display="none",2600); };
+  const go = v => { view=v; if(v==="log")renderLog(); if(v==="dash")renderDash(); render(); window.scrollTo(0,0); };
+  const upd = fn => { fn(); save(); render(); };
+  const num = (v,d) => { const n=parseFloat(v); return isNaN(n)?d:n; };
+
+  document.addEventListener("click", ev => {
+    const t=ev.target.closest("button,.pill"); if(!t) return;
+    if(t.id==="pill") return upd(()=>S.min=false);
+    if(t.id==="minb") return upd(()=>S.min=true);
+    if(t.id==="theme") return upd(()=>S.theme=S.theme==="dark"?"light":"dark");
+    if(t.id==="guard") return upd(()=>S.guard=!S.guard);
+    if(t.id==="badge"){ const k=Object.keys(FORMATS); return setFormat(k[(k.indexOf(S.format)+1)%k.length]); }
+    if(t.dataset.t) return go(t.dataset.t);
+    if(t.hasAttribute("data-back")) return go("totals");
+    if(t.dataset.p) return upd(()=>{S.period=+t.dataset.p; const f=FORMATS[S.format]; S.clock=(S.period>f.periods?OT:f.len)+":00";});
+    if(t.dataset.f) return setFormat(t.dataset.f);
+    if(t.dataset.s) return upd(()=>{const k=t.dataset.s; S[k]=Math.max(0,Math.round((num(S[k],0)+ +t.dataset.d)*10)/10);});
+    if(t.id==="bOver"||t.id==="bUnder"){
+      const side=t.id==="bOver"?"OVER":"UNDER";
+      if(S.pick&&S.pick.side===side) return upd(()=>S.pick=null);
+      if(!S.pick && todays().length>=S.limit){ return msg(`Daily limit of ${S.limit} picks reached.`); }
+      return upd(()=>{ const c=calc(S); S.pick={side,line:S.line,score:c.score,fmt:S.format,time:new Date().toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}; });
+    }
+    if(t.dataset.r){
+      if(!S.pick) return msg("Press OVER or UNDER first, then log the result.");
+      return upd(()=>{ S.history.push(Object.assign({}, S.pick, {result:t.dataset.r, day:todayKey()})); S.pick=null; });
+    }
+    if(t.id==="end") return upd(()=>{S.home=0;S.away=0;S.period=1;S.clock=FORMATS[S.format].len+":00";S.pick=null; msg("Session ended. Scores reset; your log is kept.");});
+    if(t.id==="goLog") return go("log");
+    if(t.id==="goDash") return go("dash");
+    if(t.id==="clearAll") return upd(()=>{S.history=[]; renderDash();});
+  });
+  function setFormat(k){ upd(()=>{S.format=k; S.period=1; S.clock=FORMATS[k].len+":00"; buildStatic();}); }
+  $("fmtSel").addEventListener("change",e=>setFormat(e.target.value));
+
+  const bind=(id,key,int)=>$(id).addEventListener("input",e=>{S[key]=int?Math.round(num(e.target.value,0)):num(e.target.value,0);save();render(true);});
+  [["thr","thr"],["line","line"],["home","home",1],["away","away",1],["minSample","minSample",1],["regress","regress",1],["limit","limit",1]].forEach(a=>bind(...a));
+  $("clock").addEventListener("input",e=>{S.clock=e.target.value;save();render(true);});
+  document.querySelectorAll("input").forEach(i=>i.addEventListener("focus",()=>i.select()));
+
+  buildStatic(); render();
+})();
+</script>
+</body>
+</html>
