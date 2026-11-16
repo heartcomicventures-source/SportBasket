@@ -260,7 +260,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
       <button class="wide" id="clearAll">Clear alert history</button>
     </div>
 
-    <div class="ft" id="ver">sportBasket v1.7.0 · tracks your picks, places no bets</div>
+    <div class="ft" id="ver">sportBasket v1.7.1 · tracks your picks, places no bets</div>
   </div>
 </div>
 
@@ -298,7 +298,14 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
     const sd=n>1?Math.sqrt(qs.reduce((x,y)=>x+(y-avg)*(y-avg),0)/(n-1)):0;
     return {proj,avg,expQ,qs,sd,n};
   }
-  function calc(s){
+
+  // Likely final score for each team: the projected total's remaining points are shared by each team's scoring so far (50/50 early).
+  function splitScore(c,h,a){
+    h=+h||0; a=+a||0; const rem=Math.max(0,c.proj-c.score), tot=h+a;
+    const w=Math.min(.6,c.prog*1.2), sh=tot>0?h/tot:.5, bh=w*sh+(1-w)*.5;
+    return {h:Math.round(h+rem*bh), a:Math.round(a+rem*(1-bh))};
+  }
+    function calc(s){
     const f=FORMATS[s.format], reg=f.periods*f.len, ot=s.period>f.periods, otN=ot?s.period-f.periods:0, pl=ot?OT:f.len;
     let rem=clock(s.clock); if(rem==null) rem=pl; rem=Math.max(0,Math.min(pl,rem));
     const base=ot?reg+(otN-1)*OT:(s.period-1)*f.len, el=base+(pl-rem), tot=ot?reg+otN*OT:reg, left=Math.max(0,tot-el);
@@ -372,6 +379,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
     else if(c.sig==="NO EDGE") sb=`Projection is only <b>${f1(Math.abs(c.edge))}</b> pts from the line. Needs <span class="am">${f1(S.thr)}</span> for a signal.`;
     else if(c.sig==="FINAL") sb=`Game over at <b>${c.score}</b> vs line <b>${f1(c.line)}</b>. Log the result below.`;
     else sb=`Enter scores and the clock. Signals start after <span class="am">${S.minSample}</span> min of game time.`;
+    if(c.sig==="OVER"||c.sig==="UNDER"||c.sig.startsWith("LEAN")){ const sp=splitScore(c,S.home,S.away), hn=esc(S.hn||"Team A"), an=esc(S.an||"Team B"); sb+=`<br>Likely final score: <b>${hn} ${sp.h}</b> · <b>${an} ${sp.a}</b> <span class="mu">(${sp.h+sp.a} total, projected)</span>`; }
     if(S.guard&&c.late) sb+=` <b style="color:var(--amber)">Final 2 minutes: fouling can swing the total.</b>`;
     $("sbox").innerHTML=sb;
     const fq=FORMATS[S.format];
@@ -481,7 +489,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
     const sc=g.scores||{}, h=sc.home&&sc.home.total, a=sc.away&&sc.away.total;
     const qs=[]; for(let i=1;i<=4;i++){ const hq=sc.home&&sc.home["quarter_"+i], aq=sc.away&&sc.away["quarter_"+i]; qs.push(hq!=null&&aq!=null?+hq+ +aq:null); }
     const out={id:String(g.id),fmt:fmtKey,period:p,clock:null,clockMin:null,exact:false,running:/^(Q[1-4]|OT|H[12])$/.test(sh),timerRaw:(g.status&&g.status.timer)==null?"":String(g.status.timer),home:h==null?0:+h,away:a==null?0:+a,qs,
-      label:`${(g.teams&&g.teams.home&&g.teams.home.name)||"Home"} vs ${(g.teams&&g.teams.away&&g.teams.away.name)||"Away"}`,status:sh,league:(g.league&&g.league.name)||""};
+      hn:(g.teams&&g.teams.home&&g.teams.home.name)||"Home",an:(g.teams&&g.teams.away&&g.teams.away.name)||"Away",label:`${(g.teams&&g.teams.home&&g.teams.home.name)||"Home"} vs ${(g.teams&&g.teams.away&&g.teams.away.name)||"Away"}`,status:sh,league:(g.league&&g.league.name)||""};
     if(p){ const gc=gameClockMin(g,fmtKey,mode,p); if(gc){ out.clockMin=gc.min; out.exact=gc.exact; out.clock=fmtClock(gc.min); } }
     return out;
   }
@@ -502,6 +510,7 @@ body{padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(
   function applyGame(m){
     S.format=m.fmt; buildStatic();
     S.home=m.home; S.away=m.away; S.qs=m.qs||[];
+    S.hn=m.hn||""; S.an=m.an||"";
     if(m.period){
       S.period=Math.min(m.period,FORMATS[S.format].periods+1);
       if(m.running&&m.clockMin!=null){
